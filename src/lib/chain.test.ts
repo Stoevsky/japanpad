@@ -100,6 +100,21 @@ describe("chain presets", () => {
     expect(orbit.sort()).toEqual(["mainnet", "testnet"]);
   });
 
+  test("every preset declares a getLogs range its own RPC will accept", () => {
+    // Not a style preference — a range the node refuses is a range the Garden
+    // silently skips, and a listing that skips every range looks exactly like a
+    // chain with no launches on it.
+    //
+    // Measured against the live endpoints: Robinhood's public RPC serves a
+    // 9,000-block range, Arc's answers "Request exceeds defined limit" above
+    // 5,000. A single hardcoded chunk cannot be right for both.
+    for (const env of CHAIN_ENVS) {
+      expect(CHAIN_PRESETS[env].logsChunkLimit).toBeGreaterThan(0n);
+    }
+    expect(CHAIN_PRESETS.arc.logsChunkLimit).toBeLessThanOrEqual(5_000n);
+    expect(CHAIN_PRESETS["arc-testnet"].logsChunkLimit).toBeLessThanOrEqual(5_000n);
+  });
+
   test("every non-local preset has an https RPC and an explorer", () => {
     for (const env of CHAIN_ENVS.filter((e) => e !== "local")) {
       expect(CHAIN_PRESETS[env].rpcUrl).toMatch(/^https:\/\//);

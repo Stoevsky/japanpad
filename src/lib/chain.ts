@@ -42,6 +42,15 @@ interface ChainPreset {
   valuesAreReal: boolean;
   /** Arbitrum Orbit rollups report the parent chain's height in `block.number`. */
   isArbitrumOrbit: boolean;
+  /**
+   * The widest `eth_getLogs` range this chain's public RPC will serve.
+   *
+   * Every endpoint caps this and they do not agree, so it belongs with the
+   * chain rather than in the indexer. A range above the cap is refused, the
+   * scanner skips it, and a scan that skips every range renders exactly like a
+   * chain nobody has launched on — which is the failure mode worth avoiding.
+   */
+  logsChunkLimit: bigint;
 }
 
 const ETHER: NativeCurrency = { name: "Ether", symbol: "ETH", decimals: 18 };
@@ -71,6 +80,7 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     nativeCurrency: ETHER,
     valuesAreReal: true,
     isArbitrumOrbit: true,
+    logsChunkLimit: 9_000n,
   },
   testnet: {
     id: 46630,
@@ -83,6 +93,7 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     nativeCurrency: ETHER,
     valuesAreReal: false,
     isArbitrumOrbit: true,
+    logsChunkLimit: 9_000n,
   },
   /**
    * Arc, Circle's L1, whose mainnet opened on 2026-09-16.
@@ -105,6 +116,9 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     nativeCurrency: ARC_USDC,
     valuesAreReal: true,
     isArbitrumOrbit: false,
+    // Measured on 5042: a 10,000-block range answers "Request exceeds defined
+    // limit"; 5,000 is served.
+    logsChunkLimit: 5_000n,
   },
   "arc-testnet": {
     id: 5042002,
@@ -119,6 +133,7 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     nativeCurrency: ARC_USDC,
     valuesAreReal: false,
     isArbitrumOrbit: false,
+    logsChunkLimit: 5_000n,
   },
   local: {
     id: 31337,
@@ -131,6 +146,7 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     nativeCurrency: ETHER,
     valuesAreReal: false,
     isArbitrumOrbit: false,
+    logsChunkLimit: 9_000n,
   },
 };
 

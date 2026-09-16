@@ -20,50 +20,71 @@
 
 import { createPublicClient, formatEther, http, type Address } from "viem";
 
-type Env = "mainnet" | "testnet" | "local";
+/**
+ * The chain table comes from src/lib/chain.ts rather than a copy.
+ *
+ * It used to be a copy, on the reasoning that the script must not import
+ * `server-only` modules. That reasoning was right and the copy was still wrong:
+ * chain.ts is not server-only — client components import it — and the duplicate
+ * promptly drifted. When Arc was added to src/, this script still declared
+ * `"mainnet" | "testnet" | "local"`, so `JAPANPAD_NETWORK=arc` fell through to
+ * the testnet branch and cheerfully verified the wrong network.
+ *
+ * A verification script that silently checks a different chain than the one you
+ * asked for is worse than no script.
+ */
+import { CHAIN_PRESETS, type ChainEnv } from "../src/lib/chain.ts";
 
-const ENV: Env = (() => {
+const ENV: ChainEnv = (() => {
   const raw = (process.env.JAPANPAD_NETWORK ?? process.env.NEXT_PUBLIC_JAPANPAD_NETWORK)?.trim();
-  return raw === "mainnet" || raw === "local" ? raw : "testnet";
+  return raw && raw in CHAIN_PRESETS ? (raw as ChainEnv) : "testnet";
 })();
 
-const PRESETS: Record<Env, { id: number; name: string; rpc: string }> = {
-  mainnet: { id: 4663, name: "Robinhood Chain", rpc: "https://rpc.mainnet.chain.robinhood.com" },
-  testnet: {
-    id: 46630,
-    name: "Robinhood Chain Testnet",
-    rpc: "https://rpc.testnet.chain.robinhood.com",
-  },
-  local: { id: 31337, name: "Anvil", rpc: "http://127.0.0.1:8545" },
-};
-
-/** Mirrors src/lib/pons/deployment.ts. Kept literal so the script has no import
- * chain into `server-only` modules and can run under plain node. */
+/** Mirrors src/lib/pons/deployment.ts — see the note there on literal keys. */
 const MAINNET_FACTORY: Address = "0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e";
 const NATIVE_QUOTE: Address = "0x0000000000000000000000000000000000000000";
 const MULTICALL3: Address = "0xcA11bde05977b3631167028862bE2a173976CA11";
 
-const envFactory = process.env.NEXT_PUBLIC_PONS_V2_FACTORY?.trim();
+const CONFIGURED: Record<ChainEnv, string | undefined> = {
+  mainnet: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_MAINNET,
+  testnet: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_TESTNET,
+  arc: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_ARC,
+  "arc-testnet": process.env.NEXT_PUBLIC_PONS_V2_FACTORY_ARC_TESTNET,
+  local: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_LOCAL,
+};
+
+function parseAddress(raw: string | undefined): Address | null {
+  const value = raw?.trim();
+  return value && /^0x[0-9a-fA-F]{40}$/.test(value) ? (value as Address) : null;
+}
+
 const FACTORY: Address | null =
-  envFactory && /^0x[0-9a-fA-F]{40}$/.test(envFactory)
-    ? (envFactory as Address)
-    : ENV === "mainnet"
-      ? MAINNET_FACTORY
-      : null;
+  parseAddress(process.env.NEXT_PUBLIC_PONS_V2_FACTORY) ??
+  parseAddress(CONFIGURED[ENV]) ??
+  (ENV === "mainnet" ? MAINNET_FACTORY : null);
 
 const LAUNCH_CONFIG_ID = BigInt(process.env.NEXT_PUBLIC_PONS_LAUNCH_CONFIG_ID?.trim() || "0");
 
 /**
- * What the code in src/ believes, as of the last time it was verified.
+ * What the code in src/ believes, per chain, as of the last verification.
  *
- * A mismatch is reported, not corrected. These are Pons's values to change and
- * ours to notice — see src/lib/pons/terms.ts, which reads them live for exactly
- * this reason.
+ * Per chain because these are denominated values and the chains do not share a
+ * denomination: Robinhood graduates at 4.2 ETH, and a fork on Arc graduates at
+ * 10,000 USDC. Asserting Robinhood's numbers against Arc would report drift on
+ * every run and train whoever reads it to ignore the output.
+ *
+ * A chain with no entry is reported rather than asserted. That is the honest
+ * state for a third-party deployment this repo has not adopted: the script can
+ * tell you what the contract says, but it has no prior belief to compare it to.
  */
-const EXPECTED = {
-  launchFeeWei: 500_000_000_000_000n, // 5e14 = 0.0005 ETH
-  curveFeeBps: 100n, // 1%, corroborated by a round-trip trade
-  graduationThresholdWei: 4_200_000_000_000_000_000n, // 4.2 ETH
+const EXPECTED: Partial<
+  Record<ChainEnv, { launchFeeWei: bigint; curveFeeBps: bigint; graduationThresholdWei: bigint }>
+> = {
+  mainnet: {
+    launchFeeWei: 500_000_000_000_000n, // 5e14 = 0.0005 ETH
+    curveFeeBps: 100n, // 1%, corroborated by a round-trip trade
+    graduationThresholdWei: 4_200_000_000_000_000_000n, // 4.2 ETH
+  },
 };
 
 const factoryAbi = [
@@ -132,8 +153,10 @@ function section(title: string) {
 }
 
 async function main() {
-  const preset = PRESETS[ENV];
-  const rpc = process.env.JAPANPAD_RPC_URL?.trim() || process.env.NEXT_PUBLIC_RPC_URL?.trim() || preset.rpc;
+  const preset = CHAIN_PRESETS[ENV];
+  const symbol = preset.nativeCurrency.symbol;
+  const rpc =
+    process.env.JAPANPAD_RPC_URL?.trim() || process.env.NEXT_PUBLIC_RPC_URL?.trim() || preset.rpcUrl;
 
   console.log(`\n\x1b[1mVerifying Pons against ${preset.name}\x1b[0m`);
   console.log(`\x1b[2m${rpc}\x1b[0m`);
@@ -177,7 +200,8 @@ async function main() {
   if (!FACTORY) {
     warn(
       "No factory configured",
-      `${ENV} has no NEXT_PUBLIC_PONS_V2_FACTORY set, so the launch surface disables itself. Set it to verify further.`,
+      `${ENV} has no factory configured, so the launch surface disables itself. ` +
+        `Set NEXT_PUBLIC_PONS_V2_FACTORY_${ENV.toUpperCase().replace("-", "_")} to verify further.`,
     );
     return finish();
   }
@@ -220,7 +244,7 @@ async function main() {
     return finish();
   }
 
-  compare("Launch fee", fee, EXPECTED.launchFeeWei, `${formatEther(fee)} ETH`);
+  compare("Launch fee", fee, EXPECTED[ENV]?.launchFeeWei, `${formatEther(fee)} ${symbol}`);
 
   if (enabled) pass("Launching is enabled");
   else warn("Launching is disabled", "Pons has paused launchToken. The launch form will say so.");
@@ -233,15 +257,15 @@ async function main() {
       `Pons has disabled config ${LAUNCH_CONFIG_ID}. Every launch through it reverts with LaunchConfigDisabled.`,
     );
 
-  compare("Curve fee", BigInt(config.curveFeeBps), EXPECTED.curveFeeBps, `${config.curveFeeBps / 100}%`);
+  compare("Curve fee", BigInt(config.curveFeeBps), EXPECTED[ENV]?.curveFeeBps, `${config.curveFeeBps / 100}%`);
   compare(
     "Graduation threshold",
     config.graduationThreshold,
-    EXPECTED.graduationThresholdWei,
-    `${formatEther(config.graduationThreshold)} ETH`,
+    EXPECTED[ENV]?.graduationThresholdWei,
+    `${formatEther(config.graduationThreshold)} ${symbol}`,
   );
   pass("Supply", `${formatEther(config.supply)} tokens`);
-  pass("Phantom quote", `${formatEther(config.phantomQuote)} ETH`);
+  pass("Phantom quote", `${formatEther(config.phantomQuote)} ${symbol}`);
   // Uniswap v4 fees are hundredths of a bip, and 0x800000 is the dynamic-fee
   // flag rather than a rate — so the raw value is printed alongside, and a
   // dynamic pool is named instead of being rendered as "0%".
@@ -298,20 +322,31 @@ async function main() {
       functionName: "approvedPairTokens",
       args: [NATIVE_QUOTE],
     });
-    // Native ETH is address(0) and Pons treats it specially rather than through
-    // the pair-token allowlist, so `false` here is expected and not a problem.
+    // The native asset is address(0) and Pons treats it specially rather than
+    // through the pair-token allowlist, so `false` here is expected and not a
+    // problem. On Arc that native asset is USDC, not ether.
     pass(
-      "Native ETH quote",
+      `Native ${symbol} quote`,
       approved ? "explicitly approved" : "address(0), handled natively by Pons",
     );
   } catch {
-    warn("approvedPairTokens unavailable", "Could not check, which is not fatal for an ETH-quoted launch.");
+    warn(
+      "approvedPairTokens unavailable",
+      `Could not check, which is not fatal for a ${symbol}-quoted launch.`,
+    );
   }
 
   finish();
 }
 
-function compare(label: string, actual: bigint, expected: bigint, pretty: string) {
+function compare(label: string, actual: bigint, expected: bigint | undefined, pretty: string) {
+  // No recorded expectation means this repo has never adopted this chain's
+  // deployment. Reporting the live value is the most that can honestly be said;
+  // inventing a baseline to compare against would manufacture a false all-clear.
+  if (expected === undefined) {
+    pass(label, `${pretty}  \x1b[2m(nothing recorded for ${ENV} — reported, not checked)\x1b[0m`);
+    return;
+  }
   if (actual === expected) {
     pass(label, pretty);
   } else {

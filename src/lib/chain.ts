@@ -195,6 +195,9 @@ export const EXPLORER_URL = preset.explorerUrl;
 export const FAUCET_URL = preset.faucetUrl;
 export const MULTICALL3 = preset.multicall3;
 
+/** The widest getLogs range this chain's RPC serves. See ChainPreset. */
+export const LOGS_CHUNK_LIMIT = preset.logsChunkLimit;
+
 /**
  * The gas token's ticker — "ETH" on Robinhood Chain, "USDC" on Arc.
  *

@@ -1,29 +1,82 @@
 import type { Address } from "viem";
-import { CHAIN_ENV } from "../chain";
+import { CHAIN_ENV, type ChainEnv } from "../chain";
 
 /**
  * Where Pons lives, per network.
  *
  * The mainnet factory was read off chain 4663 on 2026-09-15, not copied from a
- * doc: `eth_getCode` returns 48,357 bytes at this address, `launchEnabled()`
- * answers true, and `launchFee()` answers 5e14 wei. `npm run verify:pons`
- * re-checks all of that against the live chain.
+ * doc: `eth_getCode` returns code at this address, `launchEnabled()` answers
+ * true, and `launchFee()` answers 5e14 wei. `npm run verify:pons` re-checks all
+ * of that against the live chain.
  *
- * Testnet and local are env-supplied because Pons's testnet deployment is not
- * something we have verified; a hardcoded guess there would be a launch sent
- * into a contract that may not exist. Absent config, the launch surface
+ * Every other network is env-supplied, because a hardcoded guess is a launch
+ * sent into a contract that may not exist. Absent config, the launch surface
  * disables itself rather than encoding a transaction to nowhere.
  */
 
-const MAINNET_FACTORY: Address = "0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e";
+export const MAINNET_FACTORY: Address =
+  "0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e";
 
-function envFactory(): Address | null {
-  const raw = process.env.NEXT_PUBLIC_PONS_V2_FACTORY?.trim();
-  return raw && /^0x[0-9a-fA-F]{40}$/.test(raw) ? (raw as Address) : null;
+export function parseAddress(raw: string | undefined): Address | null {
+  const value = raw?.trim();
+  return value && /^0x[0-9a-fA-F]{40}$/.test(value) ? (value as Address) : null;
 }
 
+/**
+ * Per-chain factory configuration, read literally rather than by computed key.
+ *
+ * This shape looks redundant and is not. Next inlines `NEXT_PUBLIC_` variables
+ * by *textually* substituting `process.env.NEXT_PUBLIC_FOO` during the build —
+ * a computed access like `process.env[`NEXT_PUBLIC_..._${env}`]` matches no
+ * literal, is never substituted, and evaluates to undefined in the browser
+ * while working fine on the server. That asymmetry would show up as a launch
+ * page that renders on the server and disables itself on hydration.
+ *
+ * So each key is spelled out. Adding a chain means adding a line here.
+ */
+const CONFIGURED: Record<ChainEnv, string | undefined> = {
+  mainnet: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_MAINNET,
+  testnet: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_TESTNET,
+  arc: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_ARC,
+  "arc-testnet": process.env.NEXT_PUBLIC_PONS_V2_FACTORY_ARC_TESTNET,
+  local: process.env.NEXT_PUBLIC_PONS_V2_FACTORY_LOCAL,
+};
+
+/**
+ * Decides where a launch on `env` would be sent, or that it cannot be sent.
+ *
+ * Pure, so the rule can be tested without a process to set variables on. The
+ * rule is the whole point: a configured address always wins, mainnet may fall
+ * back to the address this repo verified, and every other chain returns null
+ * rather than guessing.
+ *
+ * Arc is the case that tests the rule. A Pons-ABI-compatible factory is live
+ * there — verified, not assumed — and it still gets no default, because it is
+ * hours old, unaudited, and Arc gas is real USDC. Discovering a contract is not
+ * the same as vouching for it. See deployment.test.ts for the measurements.
+ */
+export function resolveFactory(
+  env: ChainEnv,
+  configured: Address | null,
+): Address | null {
+  if (configured) return configured;
+  return env === "mainnet" ? MAINNET_FACTORY : null;
+}
+
+/** The factory for a given chain, reading that chain's own configuration. */
+export function factoryFor(env: ChainEnv): Address | null {
+  return resolveFactory(env, parseAddress(CONFIGURED[env]));
+}
+
+/**
+ * The factory for the chain this build targets.
+ *
+ * NEXT_PUBLIC_PONS_V2_FACTORY is the un-suffixed legacy name and still works,
+ * applying to whichever chain is active. It is checked first so an existing
+ * deployment keeps behaving exactly as it did.
+ */
 export const PONS_FACTORY: Address | null =
-  CHAIN_ENV === "mainnet" ? (envFactory() ?? MAINNET_FACTORY) : envFactory();
+  parseAddress(process.env.NEXT_PUBLIC_PONS_V2_FACTORY) ?? factoryFor(CHAIN_ENV);
 
 /**
  * Reads the launch config id out of an environment string.

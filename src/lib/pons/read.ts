@@ -1,6 +1,6 @@
 import "server-only";
 import { parseAbiItem, type Address } from "viem";
-import { MULTICALL3 } from "../chain";
+import { LOGS_CHUNK_LIMIT, MULTICALL3 } from "../chain";
 import { ponsV2CurveAbi, ponsV2TokenAbi } from "./abi";
 import { isMissingContract, logRpcFailure, publicClient } from "./client";
 import { NATIVE_QUOTE, PONS_FACTORY } from "./deployment";
@@ -35,8 +35,16 @@ const TOKEN_LAUNCHED = parseAbiItem(
  * later point you are willing to start history from.
  */
 const SCAN_FROM_BLOCK = process.env.NEXT_PUBLIC_SCAN_FROM_BLOCK?.trim();
-/** Public RPCs cap getLogs ranges; 10k is comfortably inside every one we hit. */
-const CHUNK = 9_000n;
+/**
+ * The scan chunk, which is the chain's business and not this module's.
+ *
+ * Every public RPC caps getLogs and the caps disagree: Robinhood's serves
+ * 9,000 blocks, Arc's refuses anything past 5,000 with "Request exceeds
+ * defined limit". A single hardcoded number was right for the chain it was
+ * measured on and silently wrong for the next one — every range refused, every
+ * range skipped, and a listing indistinguishable from a chain with no launches.
+ */
+const CHUNK = LOGS_CHUNK_LIMIT;
 /** Absent an explicit start, look back this far rather than scanning genesis. */
 const DEFAULT_LOOKBACK = 400_000n;
 

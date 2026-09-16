@@ -1,15 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <!--
-    Favicon. The same Fuji as components/Logo.tsx with the cap notch and water
-    line removed, because both turn to mush at 16px.
+    Favicon: Fuji against the rising sun, drawn to match the brand mark.
 
-    It carries its own ivory tile rather than sitting transparent: a vermilion
-    silhouette alone vanishes against a dark tab strip, and the tile is the
-    paper colour the whole site is built on.
+    Vector rather than the source raster on purpose. The artwork has a soft
+    photographic sky behind it, and a blurred gradient resampled to 16px turns
+    to mud — at tab size the only things that survive are the red disc, the
+    white silhouette, and the cloud bars, so those are what this draws and
+    everything else is a flat gradient standing in for the sky.
+
+    Ordering matters: clouds sit between the sun and the mountain. Painted over
+    the top they would be white-on-white against the snow and vanish; painted
+    under the sun they would not read at all.
   -->
-  <rect width="32" height="32" rx="7" fill="#f7f1e7"/>
-  <circle cx="22" cy="12" r="5.5" fill="#c8a35d" opacity="0.6"/>
-  <path
-    d="M3 25.2C7.8 24.6 11.2 18.2 14 13.1L16 9.2L18 13.1C20.8 18.2 24.2 24.6 29 25.2Z"
-    fill="#a82632"/>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#8d9dd8"/>
+      <stop offset="0.52" stop-color="#bda6cc"/>
+      <stop offset="1" stop-color="#eab6b0"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5471d"/>
+      <stop offset="1" stop-color="#c6172a"/>
+    </linearGradient>
+    <clipPath id="tile">
+      <rect width="64" height="64" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#tile)">
+    <rect width="64" height="64" fill="url(#sky)"/>
+
+    <circle cx="32" cy="27" r="18.5" fill="url(#sun)"/>
+
+    <!-- Cloud bars, offset in pairs so they read as drifting rather than stacked. -->
+    <g fill="#fdf6f2" opacity="0.94">
+      <rect x="9" y="19.8" width="17" height="3.6" rx="1.8"/>
+      <rect x="4.5" y="24.4" width="15" height="3.6" rx="1.8"/>
+      <rect x="38" y="23.8" width="17" height="3.6" rx="1.8"/>
+      <rect x="43" y="28.4" width="16" height="3.6" rx="1.8"/>
+    </g>
+
+    <!--
+      Fuji. Straight upper slopes flaring concave into a wide base, and a small
+      saddle at the summit — the real mountain's crater rim, and the detail that
+      separates it from a plain triangle.
+    -->
+    <path
+      d="M3 53C14.5 51 22 42.5 28.3 31.3Q30.3 27.3 31.2 28.4Q32 29.3 32.8 28.4Q33.7 27.3 35.7 31.3C42 42.5 49.5 51 61 53Z"
+      fill="#fff"/>
+
+    <!--
+      The snow ridges, cut as slate wedges rather than painted white on white.
+      Widest near the shoulders and tapering to points, which is the way snow
+      actually retreats down a ridge. They are the first thing to disappear
+      below about 20px, which is fine — what is left is a clean silhouette
+      rather than a smear.
+    -->
+    <g fill="#6d7dac">
+      <path d="M30.5 29.6Q25.6 36.4 21.8 45.4Q28.3 37.4 31.8 31.8Z"/>
+      <path d="M33.5 29.6Q38.4 36.4 42.2 45.4Q35.7 37.4 32.2 31.8Z"/>
+    </g>
+  </g>
 </svg>

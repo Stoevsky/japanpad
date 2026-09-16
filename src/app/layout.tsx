@@ -6,7 +6,7 @@ import Link from "next/link";
 import "./globals.css";
 import { assertChainConfig, CHAIN_NAME, VALUES_ARE_REAL } from "@/lib/chain";
 import { WalletButton } from "@/components/WalletButton";
-import { Logo, Wordmark } from "@/components/Logo";
+import { Logo, Wordmark, XMark } from "@/components/Logo";
 import { WalletProvider } from "@/components/WalletProvider";
 
 /**
@@ -61,6 +61,9 @@ const NAV = [
   { href: "/how-it-works", label: "How it works", jp: "仕組み" },
 ];
 
+/** JapanPad's account. Written once so the header and the footer cannot drift. */
+const X_URL = "https://x.com/usejapanpad";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Refuses to boot when the server and client disagree about the network,
   // which is the one misconfiguration that would surface as a signature
@@ -107,6 +110,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             <div className="ml-auto flex items-center gap-3">
+              {/*
+                Sized to the 36px hit target the buttons beside it use, rather
+                than to the 14px glyph inside it — an icon-only control that is
+                only as big as its icon is the one thing on a header that is
+                hard to hit on a phone.
+              */}
+              <a
+                href={X_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="JapanPad on X"
+                title="JapanPad on X"
+                className="size-9 grid place-items-center rounded-full border border-rule text-sumi/70 hover:text-vermilion hover:border-vermilion/50 transition-colors"
+              >
+                <XMark className="size-[15px]" />
+              </a>
               <Link
                 href="/launch"
                 className="text-sm px-4 py-2 rounded-full bg-vermilion text-paper hover:bg-vermilion-soft transition-colors"
@@ -132,6 +151,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   the liquidity are all Pons — this site is discovery and
                   presentation over the top of it.
                 </p>
+                <a
+                  href={X_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-2 mt-4 text-[13px] hover:text-vermilion transition-colors"
+                >
+                  <XMark className="size-3.5" />
+                  @usejapanpad
+                </a>
               </div>
 
               <div className="space-y-2.5">

@@ -81,6 +81,24 @@ export function isMissingContract(error: unknown): boolean {
   return definitive !== null;
 }
 
+/**
+ * Which of the two failures a caller is looking at.
+ *
+ * `wrong-address` is a configuration mistake: something answered, and what it
+ * said was that no contract of this shape lives at the address the deploy was
+ * pointed at. An operator fixes that in a minute — but only if told, and the
+ * single "could not be read" message this replaces never told them.
+ *
+ * `unreachable` is everything else, and is deliberately the fallback. Claiming
+ * an address is wrong when the truth is a dropped socket sends whoever is on
+ * call to change the one thing that was correct.
+ */
+export type ReadFailureKind = "wrong-address" | "unreachable";
+
+export function classifyReadFailure(error: unknown): ReadFailureKind {
+  return isMissingContract(error) ? "wrong-address" : "unreachable";
+}
+
 export function logRpcFailure(context: string, error: unknown): void {
   const message =
     error instanceof Error ? error.message.split("\n")[0] : String(error);

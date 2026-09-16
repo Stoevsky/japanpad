@@ -3,7 +3,8 @@ import type { Hex } from "viem";
 import { MULTICALL3 } from "../chain";
 import { ponsV2FactoryAbi } from "./abi";
 import { LAUNCH_CONFIG_ID, NATIVE_QUOTE, PONS_FACTORY } from "./deployment";
-import { logRpcFailure, publicClient } from "./client";
+import { classifyReadFailure, logRpcFailure, publicClient } from "./client";
+import type { ReadFailureKind } from "./client";
 
 /**
  * What it currently costs, and on what terms, to launch through Pons.
@@ -38,8 +39,20 @@ export interface LaunchTerms {
   configEnabled: boolean;
 }
 
-export async function readLaunchTerms(): Promise<LaunchTerms | null> {
-  if (!PONS_FACTORY) return null;
+/**
+ * Terms, or the reason there are none.
+ *
+ * `readLaunchTerms` collapses this back to `LaunchTerms | null` for the callers
+ * that only need to know whether to render figures. The launch page takes the
+ * long form, because it is the page an operator lands on when something is
+ * misconfigured and the one that has to tell them which thing.
+ */
+export type TermsResult =
+  | { ok: true; terms: LaunchTerms }
+  | { ok: false; reason: ReadFailureKind | "no-factory"; address: string | null };
+
+export async function readLaunchTermsResult(): Promise<TermsResult> {
+  if (!PONS_FACTORY) return { ok: false, reason: "no-factory", address: null };
   const multicall = MULTICALL3 ? { multicallAddress: MULTICALL3 } : {};
 
   try {
@@ -65,19 +78,27 @@ export async function readLaunchTerms(): Promise<LaunchTerms | null> {
     });
 
     return {
-      launchFeeWei: fee,
-      launchEnabled: enabled,
-      economics,
-      supply: config.supply,
-      curveFeeBps: Number(config.curveFeeBps),
-      graduationThresholdWei: config.graduationThreshold,
-      phantomQuoteWei: config.phantomQuote,
-      configEnabled: config.enabled,
+      ok: true,
+      terms: {
+        launchFeeWei: fee,
+        launchEnabled: enabled,
+        economics,
+        supply: config.supply,
+        curveFeeBps: Number(config.curveFeeBps),
+        graduationThresholdWei: config.graduationThreshold,
+        phantomQuoteWei: config.phantomQuote,
+        configEnabled: config.enabled,
+      },
     };
   } catch (e) {
-    // Null, not defaults. A launch form that guessed the fee would send the
-    // wrong msg.value and be rejected by Pons at the user's expense.
-    logRpcFailure("readLaunchTerms", e);
-    return null;
+    // A reason, never defaults. A launch form that guessed the fee would send
+    // the wrong msg.value and be rejected by Pons at the user's expense.
+    logRpcFailure(`readLaunchTerms (factory ${PONS_FACTORY})`, e);
+    return { ok: false, reason: classifyReadFailure(e), address: PONS_FACTORY };
   }
+}
+
+export async function readLaunchTerms(): Promise<LaunchTerms | null> {
+  const result = await readLaunchTermsResult();
+  return result.ok ? result.terms : null;
 }

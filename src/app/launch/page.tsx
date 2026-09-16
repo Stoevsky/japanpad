@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { CHAIN_NAME, FAUCET_URL, VALUES_ARE_REAL } from "@/lib/chain";
-import { LAUNCH_AVAILABLE } from "@/lib/pons/deployment";
-import { readLaunchTerms } from "@/lib/pons/terms";
+import { readLaunchTermsResult } from "@/lib/pons/terms";
 import { getTheme } from "@/lib/themes";
 import { LaunchFlow } from "@/components/LaunchFlow";
 import { PageHeader } from "@/components/PageHeader";
@@ -25,7 +24,7 @@ export default async function LaunchPage({
   const params = await searchParams;
   const initialTheme = params.theme && getTheme(params.theme) ? params.theme : null;
 
-  const terms = LAUNCH_AVAILABLE ? await readLaunchTerms() : null;
+  const result = await readLaunchTermsResult();
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
@@ -35,16 +34,31 @@ export default async function LaunchPage({
         funds and takes no cut of your creator fees.
       </PageHeader>
 
-      {!LAUNCH_AVAILABLE ? (
-        <Unavailable
-          title={`No Pons factory is configured for ${CHAIN_NAME}.`}
-          body="Set NEXT_PUBLIC_PONS_V2_FACTORY to the factory address on this network. Nothing can be launched until it points somewhere real."
-        />
-      ) : !terms ? (
-        <Unavailable
-          title="Pons could not be read right now."
-          body={`The launch fee and curve terms come from the factory on ${CHAIN_NAME}, and they change. Rather than guess them and have your transaction rejected, this form stays closed until the chain answers.`}
-        />
+      {!result.ok ? (
+        /*
+         * Three different problems, three different messages. They used to
+         * share two, and the shared one — "Pons could not be read right now" —
+         * covered both a deploy pointed at the wrong address and an RPC having
+         * a bad minute. Identical symptom, opposite fixes, no way to tell them
+         * apart from the page. The address is printed for the same reason: the
+         * fix for the misconfigured case is to compare it against the real one.
+         */
+        result.reason === "no-factory" ? (
+          <Unavailable
+            title={`No Pons factory is configured for ${CHAIN_NAME}.`}
+            body="Set NEXT_PUBLIC_PONS_V2_FACTORY to the factory address on this network. Nothing can be launched until it points somewhere real."
+          />
+        ) : result.reason === "wrong-address" ? (
+          <Unavailable
+            title="The configured address is not a Pons factory."
+            body={`${CHAIN_NAME} answered, and there is no Pons factory at ${result.address}. This is a configuration problem rather than an outage: check NEXT_PUBLIC_PONS_V2_FACTORY, or unset it to fall back to the address this build verified. Run \`npm run verify:pons\` to check an address against the live chain.`}
+          />
+        ) : (
+          <Unavailable
+            title="Pons could not be read right now."
+            body={`The launch fee and curve terms come from the factory on ${CHAIN_NAME}, and they change. ${CHAIN_NAME} did not answer — this is an outage or a rate limit rather than a misconfiguration. Rather than guess the terms and have your transaction rejected, this form stays closed until the chain answers.`}
+          />
+        )
       ) : (
         <>
           {!VALUES_ARE_REAL ? (
@@ -69,11 +83,11 @@ export default async function LaunchPage({
 
           <LaunchFlow
             initialThemeId={initialTheme}
-            launchEnabled={terms.launchEnabled && terms.configEnabled}
-            launchFeeWei={terms.launchFeeWei.toString()}
-            supply={terms.supply.toString()}
-            graduationThresholdWei={terms.graduationThresholdWei.toString()}
-            curveFeeBps={terms.curveFeeBps}
+            launchEnabled={result.terms.launchEnabled && result.terms.configEnabled}
+            launchFeeWei={result.terms.launchFeeWei.toString()}
+            supply={result.terms.supply.toString()}
+            graduationThresholdWei={result.terms.graduationThresholdWei.toString()}
+            curveFeeBps={result.terms.curveFeeBps}
           />
         </>
       )}

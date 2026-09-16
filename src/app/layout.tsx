@@ -6,6 +6,7 @@ import Link from "next/link";
 import "./globals.css";
 import { assertChainConfig, CHAIN_NAME, VALUES_ARE_REAL } from "@/lib/chain";
 import { WalletButton } from "@/components/WalletButton";
+import { ContractAddress } from "@/components/ContractAddress";
 import { Logo, Wordmark, XMark } from "@/components/Logo";
 import { WalletProvider } from "@/components/WalletProvider";
 
@@ -110,6 +111,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             <div className="ml-auto flex items-center gap-3">
+              {/*
+                Hidden below lg because the header already carries a wordmark,
+                four nav items, an icon link, a CTA and the wallet button. The
+                hero carries the same address for narrower screens.
+              */}
+              <ContractAddress className="hidden lg:inline-flex" />
               {/*
                 Sized to the 36px hit target the buttons beside it use, rather
                 than to the 14px glyph inside it — an icon-only control that is

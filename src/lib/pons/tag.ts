@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
 import { isThemeId } from "../themes";
+import { isCatalogTicker } from "../stocks/catalog";
 
 /**
  * The JapanPad theme, carried through a launchpad that has no idea about themes.
@@ -34,7 +35,12 @@ import { isThemeId } from "../themes";
  * so all three call this.
  */
 
-const TAG_RE = /^\[JapanPad\] theme:([a-z-]{2,24})$/m;
+/**
+ * The stock suffix is optional, so every coin launched before denominations
+ * existed still parses. A tag that carries no `stock:` is a coin measured in
+ * ETH alone, which is what all of them were.
+ */
+const TAG_RE = /^\[JapanPad\] theme:([a-z-]{2,24})(?: stock:(\d{4}\.T))?$/m;
 
 /** Where a coin's page lives on JapanPad. Doubles as the discovery marker. */
 export function siteOrigin(): string {
@@ -55,10 +61,35 @@ export function themePageUrl(themeId: string): string {
  * renders this field verbatim — sees the creator's words first and the
  * machine-readable part as a footnote rather than a header.
  */
-export function withThemeTag(description: string, themeId: string): string {
+export function withThemeTag(
+  description: string,
+  themeId: string,
+  stockTicker?: string | null,
+): string {
   const body = description.trim();
-  const tag = `[JapanPad] theme:${themeId}`;
+  const stock = stockTicker && isCatalogTicker(stockTicker) ? ` stock:${stockTicker}` : "";
+  const tag = `[JapanPad] theme:${themeId}${stock}`;
   return body ? `${body}\n\n${tag}` : tag;
+}
+
+/**
+ * Recovers the stock a coin chose to be measured against.
+ *
+ * Null when the tag carries none, and null when it names a ticker outside our
+ * catalog — an unrecognised ticker is dropped rather than displayed, for the
+ * same reason an unknown theme is: the tag is free text anyone can write, and
+ * echoing an arbitrary string back as a company would let a launch invent a
+ * listing. What survives this function is always a ticker we can actually quote.
+ *
+ * This is a DENOMINATION AND NOTHING MORE. It does not mean the coin is backed
+ * by, issued by, affiliated with, or redeemable for the company named. Every
+ * surface that renders it has to say so.
+ */
+export function parseStockTag(description: string): string | null {
+  const match = TAG_RE.exec(description);
+  const ticker = match?.[2];
+  if (!ticker || !isCatalogTicker(ticker)) return null;
+  return ticker;
 }
 
 /**
@@ -127,6 +158,8 @@ export interface BuildParamsInput {
   /** The creator's own link, or "". */
   link: string;
   themeId: string;
+  /** TSE ticker this launch is measured against, or null for ETH alone. */
+  stockTicker?: string | null;
   economics: Hex;
   salt: Hex;
 }
@@ -136,7 +169,7 @@ export function buildTokenParams(input: BuildParamsInput): PonsTokenParams {
     name: input.name,
     symbol: input.symbol,
     logo: input.logo,
-    description: withThemeTag(input.description, input.themeId),
+    description: withThemeTag(input.description, input.themeId, input.stockTicker),
     socials: {
       twitter: input.x,
       telegram: "",

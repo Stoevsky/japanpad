@@ -12,6 +12,7 @@ import {
   shortAddress,
 } from "@/lib/format";
 import { getLaunch } from "@/lib/pons/read";
+import { getStockQuote } from "@/lib/stocks/quotes";
 import { getTheme } from "@/lib/themes";
 import { CurveBar } from "@/components/CurveBar";
 import { TradePanel } from "@/components/TradePanel";
@@ -64,6 +65,12 @@ export default async function TokenPage({ params }: PageProps) {
   const launch = lookup.launch;
 
   const theme = getTheme(launch.themeId);
+  // Null when the coin chose no denomination, and also null when the feed did
+  // not answer for one it did choose. Both render as no row, because a
+  // denomination without a current price is not information — it is a company
+  // name sitting next to a coin, which is the impression this site exists to
+  // avoid creating.
+  const stock = launch.stockTicker ? await getStockQuote(launch.stockTicker) : null;
   const image = safeImageUrl(launch.logo);
   const accent = theme?.accent ?? "var(--color-vermilion)";
   const price = formatPricePerMillion(launch.spotPrice);
@@ -213,12 +220,32 @@ export default async function TokenPage({ params }: PageProps) {
               <Row label="Price per 1M tokens">
                 {price === null ? "Unavailable" : `${price} ETH`}
               </Row>
+              {stock && (
+                <Row label="Measured against">
+                  {stock.name}{" "}
+                  <span className="num text-muted">
+                    ({stock.ticker} · {stock.currency}{" "}
+                    {stock.price.toLocaleString("en-US", { maximumFractionDigits: 1 })})
+                  </span>
+                </Row>
+              )}
             </dl>
             <p className="mt-4 text-xs text-muted/90 leading-relaxed">
               Fees are the curve&rsquo;s own, read from it just now. JapanPad takes no cut
               of a trade and no cut of a launch — Pons charges its launch fee and its trade
               fee directly, and this site adds nothing on top.
             </p>
+            {stock && (
+              <p className="mt-2 text-xs text-muted/90 leading-relaxed">
+                This coin&rsquo;s creator chose {stock.name} as the unit its market cap
+                is quoted in. That is the whole of the relationship: the coin is not
+                issued by, backed by, or affiliated with the company, carries no claim
+                on it, and is not redeemable for its shares. It trades in ETH on the
+                curve above, and the two prices move independently. The tag recording
+                this choice is free text anyone can write, so treat it as the
+                creator&rsquo;s label rather than a verified fact.
+              </p>
+            )}
           </section>
         </div>
 

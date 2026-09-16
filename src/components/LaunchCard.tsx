@@ -44,18 +44,35 @@ export function LaunchCard({ launch }: { launch: LaunchSummary }) {
         )}
       </div>
 
-      {theme && (
-        <span
-          className="self-start text-[11px] px-2 py-0.5 rounded-full border"
-          style={{
-            color: theme.accent,
-            borderColor: `${theme.accent}55`,
-            backgroundColor: `${theme.accent}12`,
-          }}
-        >
-          {theme.name} <span className="jp opacity-70">{theme.japaneseName}</span>
-        </span>
-      )}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {theme && (
+          <span
+            className="text-[11px] px-2 py-0.5 rounded-full border"
+            style={{
+              color: theme.accent,
+              borderColor: `${theme.accent}55`,
+              backgroundColor: `${theme.accent}12`,
+            }}
+          >
+            {theme.name} <span className="jp opacity-70">{theme.japaneseName}</span>
+          </span>
+        )}
+        {/*
+          Ticker only, with no price and no company name.
+          A card is a summary and this one is rendered dozens to a page; fetching
+          a live quote for each would be dozens of upstream calls to decorate a
+          grid. A stale price is not an option, so the card shows the identifier
+          and the token page — which does read the live quote — shows the number.
+        */}
+        {launch.stockTicker && (
+          <span
+            className="text-[11px] px-2 py-0.5 rounded-full border border-rule text-muted font-mono"
+            title={`Market cap measured against ${launch.stockTicker}. Not backed by or affiliated with the company.`}
+          >
+            vs {launch.stockTicker}
+          </span>
+        )}
+      </div>
 
       <div className="mt-auto space-y-1.5">
         <CurveBar progress={launch.progress} accent={theme?.accent} />

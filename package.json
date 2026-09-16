@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:pons": "node --experimental-strip-types scripts/verify-pons.ts"
+    "verify:pons": "node --experimental-strip-types scripts/verify-pons.ts",
+    "verify:stocks": "node --experimental-strip-types scripts/verify-stocks.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -4,6 +4,8 @@ import { getTheme } from "@/lib/themes";
 import { MAX_NAME, MAX_SYMBOL, cleanLinks } from "@/lib/metadata";
 import { readLaunchTerms } from "@/lib/pons/terms";
 import { buildTokenParams, randomSalt, type PonsTokenParams } from "@/lib/pons/tag";
+import { isCatalogTicker } from "@/lib/stocks/catalog";
+import { getStockQuote } from "@/lib/stocks/quotes";
 
 /**
  * The last thing that happens before a wallet dialog opens.
@@ -30,6 +32,16 @@ export interface LaunchPlan {
   supply: string;
   graduationThresholdWei: string;
   curveFeeBps: number;
+  /**
+   * The denomination, re-read here rather than taken from the browser.
+   *
+   * The client sends a ticker; the price on the review screen is fetched on the
+   * server moments before it is shown. A price posted from a form is a number
+   * the user could have edited, and this one is displayed next to a transaction.
+   * Null when no stock was chosen or when the feed did not answer — in which
+   * case the review screen shows no denomination rather than an unpriced one.
+   */
+  stock: { ticker: string; name: string; currency: string; price: number } | null;
 }
 
 export type PrepareField =
@@ -40,6 +52,7 @@ export type PrepareField =
   | "link"
   | "x"
   | "theme"
+  | "stock"
   | "chain";
 
 export type PrepareResult =
@@ -54,6 +67,8 @@ export interface LaunchDraft {
   image: string;
   link: string;
   x: string;
+  /** TSE ticker to measure this launch against, or "" for ETH alone. */
+  stockTicker: string;
 }
 
 export async function prepareLaunch(draft: LaunchDraft): Promise<PrepareResult> {
@@ -91,6 +106,24 @@ export async function prepareLaunch(draft: LaunchDraft): Promise<PrepareResult> 
     return { ok: false, error: cleaned.error, field: cleaned.field };
   }
 
+  // A ticker outside the catalog is refused rather than quietly dropped. The
+  // creator picked something; silently launching without it would put a coin on
+  // chain measured differently from what the form showed.
+  const ticker = draft.stockTicker.trim();
+  if (ticker && !isCatalogTicker(ticker)) {
+    return { ok: false, error: "That is not a listing this site can quote.", field: "stock" };
+  }
+  const stock = ticker ? await getStockQuote(ticker) : null;
+  if (ticker && !stock) {
+    return {
+      ok: false,
+      error:
+        "The Tokyo price feed did not answer for that listing, so it cannot be " +
+        "quoted right now. Pick another, or launch measured in ETH alone.",
+      field: "stock",
+    };
+  }
+
   const terms = await readLaunchTerms();
   if (!terms) {
     return {
@@ -125,6 +158,7 @@ export async function prepareLaunch(draft: LaunchDraft): Promise<PrepareResult> 
         x: cleaned.links.x,
         link: cleaned.links.link,
         themeId: theme.id,
+        stockTicker: stock?.ticker ?? null,
         economics: terms.economics,
         salt: randomSalt(),
       }),
@@ -134,6 +168,14 @@ export async function prepareLaunch(draft: LaunchDraft): Promise<PrepareResult> 
       supply: terms.supply.toString(),
       graduationThresholdWei: terms.graduationThresholdWei.toString(),
       curveFeeBps: terms.curveFeeBps,
+      stock: stock
+        ? {
+            ticker: stock.ticker,
+            name: stock.name,
+            currency: stock.currency,
+            price: stock.price,
+          }
+        : null,
     },
   };
 }

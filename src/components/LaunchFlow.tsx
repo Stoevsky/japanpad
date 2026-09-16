@@ -13,6 +13,7 @@ import { txPhaseLabel, useTx } from "@/lib/tx";
 import { prepareLaunch, type LaunchDraft, type LaunchPlan } from "@/app/launch/actions";
 import { useWallet } from "./WalletProvider";
 import { WalletButton } from "./WalletButton";
+import { StockPicker } from "./StockPicker";
 
 /**
  * Pick a theme, describe a token, sign once, get a coin on Pons.
@@ -36,7 +37,7 @@ import { WalletButton } from "./WalletButton";
  * screen sends the creator there rather than promising something else.
  */
 
-type Step = "theme" | "details" | "review";
+type Step = "theme" | "stock" | "details" | "review";
 
 const EMPTY: LaunchDraft = {
   themeId: "",
@@ -46,6 +47,7 @@ const EMPTY: LaunchDraft = {
   image: "",
   link: "",
   x: "",
+  stockTicker: "",
 };
 
 export interface LaunchFlowProps {
@@ -162,7 +164,7 @@ export function LaunchFlow(props: LaunchFlowProps) {
                 type="button"
                 onClick={() => {
                   edit({ themeId: t.id });
-                  setStep("details");
+                  setStep("stock");
                 }}
                 className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                   active
@@ -193,6 +195,30 @@ export function LaunchFlow(props: LaunchFlowProps) {
 
       <Section
         index={2}
+        title="Measure it against a Tokyo listing"
+        open={step === "stock"}
+        summary={draft.stockTicker || (draft.themeId ? "ETH only" : null)}
+        onOpen={() => (draft.themeId ? setStep("stock") : undefined)}
+        disabled={!draft.themeId}
+      >
+        <p className="text-sm text-muted mb-4 leading-relaxed">
+          Optional. This sets the unit your market cap is quoted in, the way a fund
+          quotes itself against an index. Your curve still trades in ETH, the token
+          is not backed by or affiliated with the company, and nothing here is
+          redeemable for a share. It is a yardstick, not a claim.
+        </p>
+        <StockPicker
+          selected={draft.stockTicker || null}
+          themeId={draft.themeId || undefined}
+          onSelect={(ticker) => {
+            edit({ stockTicker: ticker ?? "" });
+            setStep("details");
+          }}
+        />
+      </Section>
+
+      <Section
+        index={3}
         title="Describe your token"
         open={step === "details"}
         summary={draft.name && draft.symbol ? `${draft.name} (${draft.symbol})` : null}
@@ -300,7 +326,7 @@ export function LaunchFlow(props: LaunchFlowProps) {
       </Section>
 
       <Section
-        index={3}
+        index={4}
         title="Review and launch"
         open={step === "review"}
         summary={null}
@@ -320,8 +346,37 @@ export function LaunchFlow(props: LaunchFlowProps) {
                   {formatTokens(BigInt(plan.supply))} {plan.params.symbol}
                 </span>
               </Row>
-              <Row label="Quoted in">ETH on {CHAIN_NAME}</Row>
+              <Row label="Trades in">ETH on {CHAIN_NAME}</Row>
+              {/*
+                Deliberately two separate rows. "Trades in" is what the curve
+                actually settles in and is a fact about the contract; "Measured
+                against" is a label the creator chose. Collapsing them into one
+                "paired with" line is exactly the conflation this product refuses
+                to make, so they never share a row even when both are set.
+              */}
+              {plan.stock && (
+                <Row label="Measured against">
+                  {plan.stock.name}{" "}
+                  <span className="num text-muted">
+                    ({plan.stock.ticker} · {plan.stock.currency}{" "}
+                    {plan.stock.price.toLocaleString("en-US", {
+                      maximumFractionDigits: 1,
+                    })}
+                    )
+                  </span>
+                </Row>
+              )}
             </dl>
+
+            {plan.stock && (
+              <p className="mt-3 text-xs text-muted leading-relaxed">
+                {plan.stock.name} is a unit of account for this launch and nothing
+                more. The token is not issued by, backed by, or affiliated with the
+                company, carries no claim on it, and is not redeemable for its
+                shares. The price above was read from the Tokyo Stock Exchange when
+                this screen was built and moves independently of your curve.
+              </p>
+            )}
 
             <div className="mt-5 card p-4">
               <div className="flex items-baseline justify-between text-sm">

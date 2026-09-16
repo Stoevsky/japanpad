@@ -4,7 +4,7 @@ import { MULTICALL3 } from "../chain";
 import { ponsV2CurveAbi, ponsV2TokenAbi } from "./abi";
 import { isMissingContract, logRpcFailure, publicClient } from "./client";
 import { NATIVE_QUOTE, PONS_FACTORY } from "./deployment";
-import { parseThemeTag, withoutThemeTag } from "./tag";
+import { parseStockTag, parseThemeTag, withoutThemeTag } from "./tag";
 
 /**
  * Reading JapanPad's launches back out of Pons.
@@ -45,6 +45,8 @@ export interface LaunchSummary {
   curve: Address;
   deployer: Address;
   themeId: string;
+  /** TSE ticker this launch measures itself against, or null. Cosmetic. */
+  stockTicker: string | null;
   name: string;
   symbol: string;
   logo: string;
@@ -164,7 +166,7 @@ async function hydrate(raw: RawLaunch[], limit: number): Promise<LaunchSummary[]
     ]),
   });
 
-  const tagged: Array<{ raw: RawLaunch; themeId: string; name: string; symbol: string; logo: string; description: string }> = [];
+  const tagged: Array<{ raw: RawLaunch; themeId: string; stockTicker: string | null; name: string; symbol: string; logo: string; description: string }> = [];
 
   for (let i = 0; i < raw.length; i++) {
     const description = meta[i * 4];
@@ -181,6 +183,7 @@ async function hydrate(raw: RawLaunch[], limit: number): Promise<LaunchSummary[]
     tagged.push({
       raw: r,
       themeId,
+      stockTicker: parseStockTag(String(description.result)),
       name: name?.status === "success" ? String(name.result) : "",
       symbol: symbol?.status === "success" ? String(symbol.result) : "",
       logo: logo?.status === "success" ? String(logo.result) : "",
@@ -231,6 +234,7 @@ async function hydrate(raw: RawLaunch[], limit: number): Promise<LaunchSummary[]
       curve: t.raw.curve,
       deployer: t.raw.deployer,
       themeId: t.themeId,
+      stockTicker: t.stockTicker,
       name: t.name,
       symbol: t.symbol,
       logo: t.logo,
@@ -375,6 +379,7 @@ export async function getLaunch(token: Address): Promise<LaunchLookup> {
       curve,
       deployer: ok<Address>(5, "0x0000000000000000000000000000000000000000"),
       themeId,
+      stockTicker: parseStockTag(rawDescription),
       name: ok<string>(0, ""),
       symbol: ok<string>(1, ""),
       logo: ok<string>(2, ""),

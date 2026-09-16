@@ -290,19 +290,44 @@ export function rpcUrlFor(env: ChainEnv): string {
 
 export const RPC_URL = rpcUrlFor(CHAIN_ENV);
 
-export const japanpadChain = defineChain({
-  id: preset.id,
-  name: preset.name,
-  nativeCurrency: preset.nativeCurrency,
-  rpcUrls: { default: { http: [RPC_URL] } },
-  blockExplorers: preset.explorerUrl
-    ? { default: { name: "Explorer", url: preset.explorerUrl } }
-    : undefined,
-  contracts: preset.multicall3
-    ? { multicall3: { address: preset.multicall3 } }
-    : undefined,
-  testnet: !preset.valuesAreReal,
-});
+const CHAINS = new Map<ChainEnv, ReturnType<typeof defineChain>>();
+
+/**
+ * The viem chain for `env`, built once and reused.
+ *
+ * A chain object is where an id and an endpoint are married, and getting that
+ * pairing wrong is expensive in a specific way: viem will sign for the id it
+ * was given and broadcast to the URL it was given, so a mismatched pair reaches
+ * the user as a wallet prompt for the wrong network. Both halves come from the
+ * same preset here, and chain.test.ts checks that they stay together.
+ *
+ * Memoised because this is read during render once the header switcher exists.
+ * A new chain object per call is a new client per call, which silently drops
+ * request batching — every multicall becomes N round trips.
+ */
+export function chainFor(env: ChainEnv) {
+  const existing = CHAINS.get(env);
+  if (existing) return existing;
+
+  const p = PRESETS[env];
+  const chain = defineChain({
+    id: p.id,
+    name: p.name,
+    nativeCurrency: p.nativeCurrency,
+    rpcUrls: { default: { http: [rpcUrlFor(env)] } },
+    blockExplorers: p.explorerUrl
+      ? { default: { name: "Explorer", url: p.explorerUrl } }
+      : undefined,
+    contracts: p.multicall3
+      ? { multicall3: { address: p.multicall3 } }
+      : undefined,
+    testnet: !p.valuesAreReal,
+  });
+  CHAINS.set(env, chain);
+  return chain;
+}
+
+export const japanpadChain = chainFor(CHAIN_ENV);
 
 /**
  * Robinhood Chain is an Arbitrum Orbit rollup, and that leaks in one place.

@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { CHAIN_ENVS, CHAIN_PRESETS, chainConfigError, resolveRpcUrl } from "./chain";
+import {
+  CHAIN_ENVS,
+  CHAIN_PRESETS,
+  chainConfigError,
+  chainFor,
+  resolveRpcUrl,
+} from "./chain";
 
 /**
  * The failure this guards against is not a mismatch between two set values —
@@ -198,5 +204,46 @@ describe("chain presets", () => {
       expect(CHAIN_PRESETS[env].rpcUrl).toMatch(/^https:\/\//);
       expect(CHAIN_PRESETS[env].explorerUrl).toMatch(/^https:\/\//);
     }
+  });
+});
+
+/**
+ * A viem chain per network, rather than the one the build happened to target.
+ *
+ * The header switcher makes the chain a runtime value, and a chain object is
+ * where the id and the endpoint are married. Build a client from chain A's id
+ * and chain B's URL and viem will happily sign for A and broadcast to B; the
+ * node rejects it, but only after the wallet has already asked the user to
+ * approve it. So the pairing has to come from one place and be checkable.
+ */
+describe("chainFor", () => {
+  test("each chain carries its own id, name and gas token", () => {
+    for (const env of CHAIN_ENVS) {
+      const preset = CHAIN_PRESETS[env];
+      const chain = chainFor(env);
+      expect(chain.id).toBe(preset.id);
+      expect(chain.name).toBe(preset.name);
+      expect(chain.nativeCurrency.symbol).toBe(preset.nativeCurrency.symbol);
+    }
+  });
+
+  test("each chain's endpoint resolves for that chain, not the default one", () => {
+    // With nothing configured this is the preset's own public RPC. The point is
+    // that it is never another chain's — one endpoint serves one chain.
+    for (const env of CHAIN_ENVS) {
+      expect(chainFor(env).rpcUrls.default.http[0]).toBe(CHAIN_PRESETS[env].rpcUrl);
+    }
+  });
+
+  test("only play-money chains are flagged testnet", () => {
+    for (const env of CHAIN_ENVS) {
+      expect(chainFor(env).testnet).toBe(!CHAIN_PRESETS[env].valuesAreReal);
+    }
+  });
+
+  test("returns the same object for repeated calls", () => {
+    // Called during render. A fresh chain object each time means a fresh viem
+    // client each time, which drops request batching and the cache with it.
+    expect(chainFor("arc")).toBe(chainFor("arc"));
   });
 });

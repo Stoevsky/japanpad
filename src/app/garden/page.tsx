@@ -4,6 +4,8 @@ import { formatEth, formatPercent } from "@/lib/format";
 import { listLaunches, type LaunchSummary } from "@/lib/pons/read";
 import { THEMES, type Theme } from "@/lib/themes";
 import { PageHeader } from "@/components/PageHeader";
+import { ExampleGrid } from "@/components/ExampleCard";
+import { EXAMPLE_LAUNCHES } from "@/lib/examples";
 
 /**
  * The Garden — every JapanPad launch at once, arranged by theme.
@@ -122,17 +124,16 @@ export default async function GardenPage() {
           </p>
         </div>
       ) : beds.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="font-display text-lg">Bare soil.</p>
-          <p className="text-sm text-muted mt-1">
-            Nothing has been launched through JapanPad on {CHAIN_NAME} so far.
-          </p>
-          <Link
-            href="/launch"
-            className="inline-block mt-4 px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
-          >
-            Plant the first
-          </Link>
+        <div className="space-y-6">
+          <ExampleGrid examples={EXAMPLE_LAUNCHES} />
+          <div className="text-center">
+            <Link
+              href="/launch"
+              className="inline-block px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
+            >
+              Plant the first on {CHAIN_NAME}
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">

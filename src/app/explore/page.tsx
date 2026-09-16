@@ -3,6 +3,8 @@ import { CHAIN_NAME } from "@/lib/chain";
 import { THEMES, getTheme } from "@/lib/themes";
 import { listLaunches } from "@/lib/pons/read";
 import { LaunchCard } from "@/components/LaunchCard";
+import { ExampleGrid } from "@/components/ExampleCard";
+import { EXAMPLE_LAUNCHES } from "@/lib/examples";
 import { PageHeader } from "@/components/PageHeader";
 
 export const revalidate = 20;
@@ -93,21 +95,38 @@ export default async function Explore({
           </p>
         </div>
       ) : sorted.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-display text-lg">
-            {activeTheme ? `Nothing in ${activeTheme.name} yet.` : "No launches yet."}
-          </p>
-          <p className="text-sm text-muted mt-1">
-            {activeTheme
-              ? "No JapanPad token has been filed under this theme so far."
-              : `Nothing has been launched through JapanPad on ${CHAIN_NAME} so far.`}
-          </p>
-          <Link
-            href="/launch"
-            className="inline-block mt-4 px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
-          >
-            Launch one
-          </Link>
+        <div className="space-y-6">
+          {/*
+            Placeholders only on the unfiltered view. Under a theme filter the
+            honest answer is that this theme is empty, and a grid of examples
+            from other themes would answer a question nobody asked.
+          */}
+          {activeTheme ? (
+            <div className="card p-10 text-center">
+              <p className="font-display text-lg">Nothing in {activeTheme.name} yet.</p>
+              <p className="text-sm text-muted mt-1">
+                No JapanPad token has been filed under this theme so far.
+              </p>
+              <Link
+                href="/launch"
+                className="inline-block mt-4 px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
+              >
+                Launch one
+              </Link>
+            </div>
+          ) : (
+            <>
+              <ExampleGrid examples={EXAMPLE_LAUNCHES} />
+              <div className="text-center">
+                <Link
+                  href="/launch"
+                  className="inline-block px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
+                >
+                  Launch the first on {CHAIN_NAME}
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

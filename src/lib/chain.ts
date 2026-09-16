@@ -15,7 +15,13 @@ import { defineChain } from "viem";
  * carrying the constant would only invite someone to build a claim on it.
  */
 
-export type ChainEnv = "mainnet" | "testnet" | "local";
+export type ChainEnv = "mainnet" | "testnet" | "local" | "arc" | "arc-testnet";
+
+interface NativeCurrency {
+  name: string;
+  symbol: string;
+  decimals: number;
+}
 
 interface ChainPreset {
   id: number;
@@ -23,11 +29,35 @@ interface ChainPreset {
   shortName: string;
   rpcUrl: string;
   explorerUrl: string;
-  /** Robinhood's own faucet, for topping up a testnet wallet. */
+  /** The chain's own faucet, for topping up a testnet wallet. */
   faucetUrl: string | null;
   /** Multicall3, verified by calling getChainId() and comparing the answer. */
   multicall3: `0x${string}` | null;
+  /**
+   * The gas token. Not every chain here pays in ether, so no surface may
+   * hardcode "ETH" — see NATIVE_SYMBOL.
+   */
+  nativeCurrency: NativeCurrency;
+  /** Real money. Testnets and local carry play money and must say so. */
+  valuesAreReal: boolean;
+  /** Arbitrum Orbit rollups report the parent chain's height in `block.number`. */
+  isArbitrumOrbit: boolean;
 }
+
+const ETHER: NativeCurrency = { name: "Ether", symbol: "ETH", decimals: 18 };
+
+/**
+ * Arc pays gas in USDC, and the denomination is the trap.
+ *
+ * Arc exposes USDC through two interfaces that differ by a factor of 10^12:
+ * the native one — gas, `msg.value`, plain sends — carries 18 decimals, while
+ * the ERC-20 one carries the usual 6. This is the native side, so 18 is right
+ * and `formatEth`'s 18-decimal maths needs no special case. Verified by
+ * magnitude as well as by docs: `eth_gasPrice` on 5042 answers 20 gwei, which
+ * over a 21,000-gas send is 4.2e14 base units. At 18 decimals that is $0.00042;
+ * at 6 it would be $420 million.
+ */
+const ARC_USDC: NativeCurrency = { name: "USDC", symbol: "USDC", decimals: 18 };
 
 const PRESETS: Record<ChainEnv, ChainPreset> = {
   mainnet: {
@@ -38,6 +68,9 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     explorerUrl: "https://robinhoodchain.blockscout.com",
     faucetUrl: null,
     multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    nativeCurrency: ETHER,
+    valuesAreReal: true,
+    isArbitrumOrbit: true,
   },
   testnet: {
     id: 46630,
@@ -47,6 +80,45 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     explorerUrl: "https://explorer.testnet.chain.robinhood.com",
     faucetUrl: "https://faucet.testnet.chain.robinhood.com",
     multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    nativeCurrency: ETHER,
+    valuesAreReal: false,
+    isArbitrumOrbit: true,
+  },
+  /**
+   * Arc, Circle's L1, whose mainnet opened on 2026-09-16.
+   *
+   * Every value read off the live network on 2026-09-17, to the same standard
+   * as the Robinhood entries above: `eth_chainId` answered 0x13b2 (5042) on
+   * mainnet and 0x4cef52 (5042002) on testnet, and Multicall3 at the canonical
+   * address answered `getChainId()` with those same ids on both.
+   *
+   * Not an Orbit rollup, so `block.number` means what it says here.
+   */
+  arc: {
+    id: 5042,
+    name: "Arc",
+    shortName: "Arc",
+    rpcUrl: "https://rpc.mainnet.arc.io",
+    explorerUrl: "https://explorer.arc.io",
+    faucetUrl: null,
+    multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    nativeCurrency: ARC_USDC,
+    valuesAreReal: true,
+    isArbitrumOrbit: false,
+  },
+  "arc-testnet": {
+    id: 5042002,
+    name: "Arc Testnet",
+    shortName: "Arc Testnet",
+    rpcUrl: "https://rpc.testnet.arc.io",
+    explorerUrl: "https://explorer.testnet.arc.io",
+    // Arc runs one, but this has not been confirmed against a live URL, and a
+    // faucet link that 404s is worse than no faucet link.
+    faucetUrl: null,
+    multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    nativeCurrency: ARC_USDC,
+    valuesAreReal: false,
+    isArbitrumOrbit: false,
   },
   local: {
     id: 31337,
@@ -56,11 +128,20 @@ const PRESETS: Record<ChainEnv, ChainPreset> = {
     explorerUrl: "",
     faucetUrl: null,
     multicall3: parseAddress(process.env.NEXT_PUBLIC_MULTICALL3),
+    nativeCurrency: ETHER,
+    valuesAreReal: false,
+    isArbitrumOrbit: false,
   },
 };
 
+export const CHAIN_ENVS = Object.keys(PRESETS) as ChainEnv[];
+
+/** Exposed so the invariants below can be tested without booting a network. */
+export const CHAIN_PRESETS: Readonly<Record<ChainEnv, Readonly<ChainPreset>>> = PRESETS;
+
 function parseEnv(raw: string | undefined): ChainEnv | null {
-  return raw === "mainnet" || raw === "testnet" || raw === "local" ? raw : null;
+  const value = raw?.trim();
+  return value && value in PRESETS ? (value as ChainEnv) : null;
 }
 
 function parseAddress(raw: string | undefined): `0x${string}` | null {
@@ -86,9 +167,10 @@ const preset = PRESETS[CHAIN_ENV];
 export const IS_MAINNET = CHAIN_ENV === "mainnet";
 export const IS_TESTNET = CHAIN_ENV === "testnet";
 export const IS_LOCAL = CHAIN_ENV === "local";
+export const IS_ARC = CHAIN_ENV === "arc" || CHAIN_ENV === "arc-testnet";
 
-/** Testnet and local carry play money. Every surface that shows a price says so. */
-export const VALUES_ARE_REAL = IS_MAINNET;
+/** Testnets and local carry play money. Every surface that shows a price says so. */
+export const VALUES_ARE_REAL = preset.valuesAreReal;
 
 export const CHAIN_ID = preset.id;
 export const CHAIN_NAME = preset.name;
@@ -96,6 +178,15 @@ export const CHAIN_SHORT_NAME = preset.shortName;
 export const EXPLORER_URL = preset.explorerUrl;
 export const FAUCET_URL = preset.faucetUrl;
 export const MULTICALL3 = preset.multicall3;
+
+/**
+ * The gas token's ticker — "ETH" on Robinhood Chain, "USDC" on Arc.
+ *
+ * Every price, balance and fee in the UI reads this instead of writing "ETH",
+ * because on Arc that label would name the wrong asset.
+ */
+export const NATIVE_CURRENCY = preset.nativeCurrency;
+export const NATIVE_SYMBOL = preset.nativeCurrency.symbol;
 
 /** A private RPC always wins, so production never leans on the public endpoint. */
 const overrideRpc = process.env.JAPANPAD_RPC_URL ?? process.env.NEXT_PUBLIC_RPC_URL;
@@ -105,15 +196,15 @@ export const RPC_URL =
 export const japanpadChain = defineChain({
   id: preset.id,
   name: preset.name,
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  nativeCurrency: preset.nativeCurrency,
   rpcUrls: { default: { http: [RPC_URL] } },
   blockExplorers: preset.explorerUrl
-    ? { default: { name: "Blockscout", url: preset.explorerUrl } }
+    ? { default: { name: "Explorer", url: preset.explorerUrl } }
     : undefined,
   contracts: preset.multicall3
     ? { multicall3: { address: preset.multicall3 } }
     : undefined,
-  testnet: !IS_MAINNET,
+  testnet: !preset.valuesAreReal,
 });
 
 /**
@@ -129,7 +220,7 @@ export const japanpadChain = defineChain({
  * block height that came from inside a contract is the parent's and is
  * meaningless here.
  */
-export const IS_ARBITRUM_ORBIT = CHAIN_ENV !== "local";
+export const IS_ARBITRUM_ORBIT = preset.isArbitrumOrbit;
 
 export function txUrl(hash: string): string {
   return preset.explorerUrl ? `${preset.explorerUrl}/tx/${hash}` : "";

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NATIVE_SYMBOL } from "@/lib/chain";
 import { getTheme } from "@/lib/themes";
 import { formatEth, formatPercent, safeImageUrl, shortAddress } from "@/lib/format";
 import type { LaunchSummary } from "@/lib/pons/read";
@@ -82,7 +83,7 @@ export function LaunchCard({ launch }: { launch: LaunchSummary }) {
             graduation
           </span>
           <span className="num">
-            {formatEth(launch.raised)} / {formatEth(launch.graduationThreshold)} ETH
+            {formatEth(launch.raised)} / {formatEth(launch.graduationThreshold)} {NATIVE_SYMBOL}
           </span>
         </div>
       </div>

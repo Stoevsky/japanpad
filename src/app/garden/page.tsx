@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CHAIN_NAME } from "@/lib/chain";
+import { CHAIN_NAME, NATIVE_SYMBOL } from "@/lib/chain";
 import { formatEth, formatPercent } from "@/lib/format";
 import { listLaunches, type LaunchSummary } from "@/lib/pons/read";
 import { THEMES, type Theme } from "@/lib/themes";
@@ -199,7 +199,7 @@ function Plant({ launch, accent }: { launch: LaunchSummary; accent: string }) {
       title={`${launch.name || "Untitled"} ($${launch.symbol}) — ${label}, ${formatPercent(
         launch.progress,
         0,
-      )} to graduation, ${formatEth(launch.raised)} ETH raised`}
+      )} to graduation, ${formatEth(launch.raised)} ${NATIVE_SYMBOL} raised`}
       className="group flex flex-col items-center gap-1 w-20 rounded-lg px-1 py-2 hover:bg-ivory transition-colors"
     >
       <span

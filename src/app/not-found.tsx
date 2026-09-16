@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NATIVE_SYMBOL } from "@/lib/chain";
 
 /**
  * A genuine 404, and only ever a genuine one.
@@ -16,7 +17,7 @@ export default function NotFound() {
       <p className="mt-3 text-sm text-muted leading-relaxed">
         This page does not exist. If you followed a token link, the address is
         either not a Pons token, not launched through JapanPad, or not one of the
-        ETH-quoted curves this site can price.
+        {NATIVE_SYMBOL}-quoted curves this site can price.
       </p>
       <div className="mt-6 flex items-center justify-center gap-3">
         <Link

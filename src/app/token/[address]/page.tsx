@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isAddress, getAddress, type Address } from "viem";
-import { CHAIN_NAME, VALUES_ARE_REAL, addressUrl } from "@/lib/chain";
+import { CHAIN_NAME, NATIVE_SYMBOL, VALUES_ARE_REAL, addressUrl } from "@/lib/chain";
 import {
   formatEth,
   formatPercent,
@@ -180,7 +180,7 @@ export default async function TokenPage({ params }: PageProps) {
             <p className="mt-2 text-sm text-muted">
               <span className="num">
                 {formatEth(launch.raised, 5)} of{" "}
-                {formatEth(launch.graduationThreshold, 5)} ETH
+                {formatEth(launch.graduationThreshold, 5)} {NATIVE_SYMBOL}
               </span>{" "}
               raised on the curve.
             </p>
@@ -218,7 +218,7 @@ export default async function TokenPage({ params }: PageProps) {
                   : "None"}
               </Row>
               <Row label="Price per 1M tokens">
-                {price === null ? "Unavailable" : `${price} ETH`}
+                {price === null ? "Unavailable" : `${price} ${NATIVE_SYMBOL}`}
               </Row>
               {stock && (
                 <Row label="Measured against">
@@ -240,7 +240,7 @@ export default async function TokenPage({ params }: PageProps) {
                 This coin&rsquo;s creator chose {stock.name} as the unit its market cap
                 is quoted in. That is the whole of the relationship: the coin is not
                 issued by, backed by, or affiliated with the company, carries no claim
-                on it, and is not redeemable for its shares. It trades in ETH on the
+                on it, and is not redeemable for its shares. It trades in {NATIVE_SYMBOL} on the
                 curve above, and the two prices move independently. The tag recording
                 this choice is free text anyone can write, so treat it as the
                 creator&rsquo;s label rather than a verified fact.

@@ -16,7 +16,14 @@ import {
   type Address,
   type WalletClient,
 } from "viem";
-import { CHAIN_ID, CHAIN_NAME, EXPLORER_URL, RPC_URL, japanpadChain } from "@/lib/chain";
+import {
+  CHAIN_ID,
+  CHAIN_NAME,
+  EXPLORER_URL,
+  NATIVE_CURRENCY,
+  RPC_URL,
+  japanpadChain,
+} from "@/lib/chain";
 import {
   mergeWallets,
   type DiscoveredWallet,
@@ -260,7 +267,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             {
               chainId: hexId,
               chainName: CHAIN_NAME,
-              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+              // From the preset, never hardcoded: adding Arc with symbol "ETH"
+              // would leave a wrong currency label in the user's wallet.
+              nativeCurrency: NATIVE_CURRENCY,
               rpcUrls: [RPC_URL],
               blockExplorerUrls: EXPLORER_URL ? [EXPLORER_URL] : undefined,
             },

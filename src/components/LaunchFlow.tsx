@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { parseEventLogs, type Address } from "viem";
-import { CHAIN_NAME, txUrl } from "@/lib/chain";
+import { CHAIN_NAME, NATIVE_SYMBOL, txUrl } from "@/lib/chain";
 import { formatEth, formatTokens } from "@/lib/format";
 import { MAX_DESCRIPTION, MAX_NAME, MAX_SYMBOL } from "@/lib/metadata";
 import { ponsV2FactoryAbi } from "@/lib/pons/abi";
@@ -197,13 +197,13 @@ export function LaunchFlow(props: LaunchFlowProps) {
         index={2}
         title="Measure it against a Tokyo listing"
         open={step === "stock"}
-        summary={draft.stockTicker || (draft.themeId ? "ETH only" : null)}
+        summary={draft.stockTicker || (draft.themeId ? `${NATIVE_SYMBOL} only` : null)}
         onOpen={() => (draft.themeId ? setStep("stock") : undefined)}
         disabled={!draft.themeId}
       >
         <p className="text-sm text-muted mb-4 leading-relaxed">
           Optional. This sets the unit your market cap is quoted in, the way a fund
-          quotes itself against an index. Your curve still trades in ETH, the token
+          quotes itself against an index. Your curve still trades in {NATIVE_SYMBOL}, the token
           is not backed by or affiliated with the company, and nothing here is
           redeemable for a share. It is a yardstick, not a claim.
         </p>
@@ -303,10 +303,10 @@ export function LaunchFlow(props: LaunchFlowProps) {
           <p className="mt-3 text-xs text-muted leading-relaxed">
             The curve graduates into a permanently locked Uniswap v4 pool once it has taken{" "}
             <span className="num">
-              {formatEth(BigInt(props.graduationThresholdWei))} ETH
+              {formatEth(BigInt(props.graduationThresholdWei))} {NATIVE_SYMBOL}
             </span>
             . Until then every buy and
-            sell happens on the curve, quoted in ETH.
+            sell happens on the curve, quoted in {NATIVE_SYMBOL}.
           </p>
         </div>
 
@@ -346,7 +346,7 @@ export function LaunchFlow(props: LaunchFlowProps) {
                   {formatTokens(BigInt(plan.supply))} {plan.params.symbol}
                 </span>
               </Row>
-              <Row label="Trades in">ETH on {CHAIN_NAME}</Row>
+              <Row label="Trades in">{NATIVE_SYMBOL} on {CHAIN_NAME}</Row>
               {/*
                 Deliberately two separate rows. "Trades in" is what the curve
                 actually settles in and is a fact about the contract; "Measured
@@ -381,7 +381,7 @@ export function LaunchFlow(props: LaunchFlowProps) {
             <div className="mt-5 card p-4">
               <div className="flex items-baseline justify-between text-sm">
                 <span className="text-muted">Pons launch fee</span>
-                <span className="num">{formatEth(BigInt(plan.launchFeeWei), 6)} ETH</span>
+                <span className="num">{formatEth(BigInt(plan.launchFeeWei), 6)} {NATIVE_SYMBOL}</span>
               </div>
               <p className="mt-2 text-xs text-muted leading-relaxed">
                 Plus gas, and nothing else — JapanPad charges no fee of its own. This amount

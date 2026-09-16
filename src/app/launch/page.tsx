@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CHAIN_NAME, FAUCET_URL, VALUES_ARE_REAL } from "@/lib/chain";
+import { CHAIN_NAME, FAUCET_URL, NATIVE_SYMBOL, VALUES_ARE_REAL } from "@/lib/chain";
 import { readLaunchTermsResult } from "@/lib/pons/terms";
 import { getTheme } from "@/lib/themes";
 import { LaunchFlow } from "@/components/LaunchFlow";
@@ -73,7 +73,7 @@ export default async function LaunchPage({
                     rel="noreferrer noopener"
                     className="underline hover:text-vermilion"
                   >
-                    Get test ETH
+                    Get test {NATIVE_SYMBOL}
                   </a>
                   .
                 </>

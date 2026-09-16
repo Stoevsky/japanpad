@@ -1,5 +1,6 @@
 "use server";
 
+import { NATIVE_SYMBOL } from "@/lib/chain";
 import { getTheme } from "@/lib/themes";
 import { MAX_NAME, MAX_SYMBOL, cleanLinks } from "@/lib/metadata";
 import { readLaunchTerms } from "@/lib/pons/terms";
@@ -119,7 +120,7 @@ export async function prepareLaunch(draft: LaunchDraft): Promise<PrepareResult> 
       ok: false,
       error:
         "The Tokyo price feed did not answer for that listing, so it cannot be " +
-        "quoted right now. Pick another, or launch measured in ETH alone.",
+        `quoted right now. Pick another, or launch measured in ${NATIVE_SYMBOL} alone.`,
       field: "stock",
     };
   }

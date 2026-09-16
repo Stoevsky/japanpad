@@ -3,6 +3,7 @@ import {
   ContractFunctionRevertedError,
   UserRejectedRequestError,
 } from "viem";
+import { NATIVE_SYMBOL } from "@/lib/chain";
 
 /**
  * Turning a chain refusal into a sentence.
@@ -71,13 +72,13 @@ export function revertSentence(name: string): string {
       // Seen on a live Pons curve quoted in an ERC-20 rather than ETH. JapanPad
       // only lists ETH-quoted curves, so reaching this means the curve is not
       // one of ours — worth saying plainly rather than blaming the trade.
-      return "This curve does not trade against ETH, so it cannot be traded here.";
+      return `This curve does not trade against ${NATIVE_SYMBOL}, so it cannot be traded here.`;
     case "ZeroAmount":
       return "That amount rounds to nothing on this curve.";
     case "ZeroAddress":
       return "That recipient address is not valid.";
     case "TransferFailed":
-      return "The ETH transfer failed.";
+      return `The ${NATIVE_SYMBOL} transfer failed.`;
     default:
       return `Pons refused this: ${name}.`;
   }

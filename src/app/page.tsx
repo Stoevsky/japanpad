@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { CHAIN_NAME } from "@/lib/chain";
+import { CHAIN_NAME, NATIVE_SYMBOL } from "@/lib/chain";
 import { THEMES } from "@/lib/themes";
 import { listLaunches } from "@/lib/pons/read";
 import { readLaunchTerms } from "@/lib/pons/terms";
@@ -8,6 +8,7 @@ import { STOCK_CATALOG, isCatalogTicker } from "@/lib/stocks/catalog";
 import { getStockQuote } from "@/lib/stocks/quotes";
 import { formatEth, formatPercent, formatTokens } from "@/lib/format";
 import { LaunchCard } from "@/components/LaunchCard";
+import { ContractAddress } from "@/components/ContractAddress";
 import { ThemeCard } from "@/components/ThemeCard";
 
 // Launches are read from chain on request. Revalidate keeps the homepage cheap
@@ -60,8 +61,14 @@ function Hero() {
             holds your funds.
           </p>
 
+          {/* Sits between the copy and the CTAs, so it is the middle of the
+              hero block and is reachable on phones, where the header hides it. */}
+          <div className="rise mt-7" style={{ animationDelay: "230ms" }}>
+            <ContractAddress variant="hero" />
+          </div>
+
           <div
-            className="rise flex flex-wrap gap-3 mt-9"
+            className="rise flex flex-wrap gap-3 mt-7"
             style={{ animationDelay: "260ms" }}
           >
             <Link
@@ -90,7 +97,7 @@ function Hero() {
             {[
               `${STOCK_CATALOG.length} Tokyo listings`,
               `${THEMES.length} themes`,
-              "Settles in ETH",
+              `Settles in ${NATIVE_SYMBOL}`,
             ].map((t) => (
               <span
                 key={t}
@@ -133,11 +140,11 @@ async function TermsStrip() {
   }
 
   const items = [
-    { label: "Launch fee", value: `${formatEth(terms.launchFeeWei, 6)} ETH` },
+    { label: "Launch fee", value: `${formatEth(terms.launchFeeWei, 6)} ${NATIVE_SYMBOL}` },
     { label: "Supply", value: formatTokens(terms.supply) },
     {
       label: "Graduates at",
-      value: `${formatEth(terms.graduationThresholdWei, 4)} ETH`,
+      value: `${formatEth(terms.graduationThresholdWei, 4)} ${NATIVE_SYMBOL}`,
     },
     { label: "Curve fee", value: formatPercent(terms.curveFeeBps / 10_000, 2) },
   ];
@@ -296,7 +303,7 @@ function Steps() {
       n: "04",
       jp: "卒業",
       title: "Trade, then graduate",
-      body: `The curve prices every buy and sell in ETH. At the threshold, Pons moves the liquidity into a permanently locked Uniswap v4 pool.`,
+      body: `The curve prices every buy and sell in ${NATIVE_SYMBOL}. At the threshold, Pons moves the liquidity into a permanently locked Uniswap v4 pool.`,
     },
   ];
 
@@ -359,7 +366,7 @@ function Denomination() {
 
       <SectionHead
         jp="尺度"
-        title="Measured in Tokyo, settled in ETH"
+        title={`Measured in Tokyo, settled in ${NATIVE_SYMBOL}`}
         sub="A yardstick, not a claim."
       />
 
@@ -389,7 +396,7 @@ function Denomination() {
                 "Not ownership. No shares, dividends, or voting rights.",
                 "Not redeemable. A coin cannot be exchanged for stock.",
                 "Not affiliation. No listed company is involved with JapanPad.",
-                "Not linked in price. The curve trades in ETH; the two move apart.",
+                `Not linked in price. The curve trades in ${NATIVE_SYMBOL}; the two move apart.`,
               ].map((line) => (
                 <li key={line} className="flex gap-2.5">
                   <span className="text-vermilion/60 shrink-0" aria-hidden>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { NATIVE_SYMBOL } from "@/lib/chain";
 import { THEMES } from "@/lib/themes";
 
 /**
@@ -82,7 +83,7 @@ export function StockPicker({ selected, onSelect, themeId }: StockPickerProps) {
         <p className="text-sm text-sumi/80">Tokyo prices are unavailable right now.</p>
         <p className="text-xs text-muted mt-1">
           A denomination has to be a real price, so none are offered rather than
-          showing a stale one. You can launch measured in ETH alone and add this later.
+          showing a stale one. You can launch measured in {NATIVE_SYMBOL} alone and add this later.
         </p>
       </div>
     );
@@ -150,7 +151,7 @@ export function StockPicker({ selected, onSelect, themeId }: StockPickerProps) {
               : "text-left px-4 py-3 rounded-xl border border-rule bg-paper hover:border-vermilion transition-colors"
           }
         >
-          <p className="text-sm font-medium">ETH only</p>
+          <p className="text-sm font-medium">{NATIVE_SYMBOL} only</p>
           <p className="text-xs text-muted">No stock denomination.</p>
         </button>
 
@@ -194,7 +195,7 @@ export function StockPicker({ selected, onSelect, themeId }: StockPickerProps) {
         Prices read from the Tokyo Stock Exchange at{" "}
         {new Date(data.readAt).toLocaleTimeString()}. A denomination sets what your
         market cap is quoted in. It is not a claim of backing, affiliation, or
-        redeemability — your curve trades in ETH either way.
+        redeemability — your curve trades in {NATIVE_SYMBOL} either way.
       </p>
     </div>
   );

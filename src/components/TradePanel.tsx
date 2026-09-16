@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Address } from "viem";
-import { CHAIN_NAME, VALUES_ARE_REAL, txUrl } from "@/lib/chain";
+import { CHAIN_NAME, NATIVE_SYMBOL, VALUES_ARE_REAL, txUrl } from "@/lib/chain";
 import { formatEth, formatTokens, parseAmount } from "@/lib/format";
 import { ponsV2CurveAbi, ponsV2TokenAbi } from "@/lib/pons/abi";
 import { publicClient } from "@/lib/pons/client";
@@ -302,7 +302,7 @@ export function TradePanel(props: TradePanelProps) {
               </button>
             ) : (
               <span className="text-xs text-muted">
-                Balance: <span className="num">{formatEth(mine.eth)} ETH</span>
+                Balance: <span className="num">{formatEth(mine.eth)} {NATIVE_SYMBOL}</span>
               </span>
             )
           ) : null}
@@ -316,7 +316,7 @@ export function TradePanel(props: TradePanelProps) {
             onChange={(e) => setAmount(e.target.value)}
           />
           <span className="num text-sm text-muted shrink-0 w-16 truncate">
-            {side === "buy" ? "ETH" : props.symbol}
+            {side === "buy" ? NATIVE_SYMBOL : props.symbol}
           </span>
         </div>
       </label>
@@ -350,13 +350,13 @@ export function TradePanel(props: TradePanelProps) {
               <dd className="num">
                 {quote.side === "buy"
                   ? `${formatTokens(quote.tokensOut)} ${props.symbol}`
-                  : `${formatEth(quote.quoteOut, 6)} ETH`}
+                  : `${formatEth(quote.quoteOut, 6)} ${NATIVE_SYMBOL}`}
               </dd>
             </div>
             <div className="flex items-baseline justify-between text-xs">
               <dt className="text-muted">Fee</dt>
               <dd className="num text-muted">
-                {formatEth(quote.fee + quote.tax, 6)} ETH
+                {formatEth(quote.fee + quote.tax, 6)} {NATIVE_SYMBOL}
               </dd>
             </div>
             <div className="flex items-baseline justify-between text-xs">
@@ -364,15 +364,15 @@ export function TradePanel(props: TradePanelProps) {
               <dd className="num text-muted">
                 {quote.side === "buy"
                   ? `${formatTokens(bound)} ${props.symbol}`
-                  : `${formatEth(bound, 6)} ETH`}
+                  : `${formatEth(bound, 6)} ${NATIVE_SYMBOL}`}
               </dd>
             </div>
             {quote.side === "buy" && quote.partial ? (
               <p className="text-xs text-sumi/80 bg-sakura/15 border border-sakura/40 rounded-lg px-3 py-2 mt-2 leading-relaxed">
                 This buys out the rest of the curve. Only{" "}
-                <span className="num">{formatEth(quote.spent, 6)} ETH</span> is
+                <span className="num">{formatEth(quote.spent, 6)} {NATIVE_SYMBOL}</span> is
                 spent and{" "}
-                <span className="num">{formatEth(quote.refund, 6)} ETH</span>{" "}
+                <span className="num">{formatEth(quote.refund, 6)} {NATIVE_SYMBOL}</span>{" "}
                 comes straight back in the same transaction — after which the
                 token graduates.
               </p>
@@ -407,7 +407,7 @@ export function TradePanel(props: TradePanelProps) {
 
       {short ? (
         <p className="mt-3 text-xs text-vermilion">
-          That is more than your {side === "buy" ? "ETH" : props.symbol} balance.
+          That is more than your {side === "buy" ? NATIVE_SYMBOL : props.symbol} balance.
         </p>
       ) : null}
 

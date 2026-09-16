@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CHAIN_NAME, EXPLORER_URL, IS_MAINNET, VALUES_ARE_REAL } from "@/lib/chain";
+import { CHAIN_NAME, EXPLORER_URL, IS_MAINNET, NATIVE_SYMBOL, VALUES_ARE_REAL } from "@/lib/chain";
 import { formatEth, formatPercent, formatTokens } from "@/lib/format";
 import { PONS_FACTORY } from "@/lib/pons/deployment";
 import { readLaunchTerms } from "@/lib/pons/terms";
@@ -44,7 +44,7 @@ export default async function HowItWorks() {
       jp: "発行",
       title: "Launch through Pons",
       body: `Your wallet signs one transaction to Pons's launch factory. Pons mints the supply, deploys a bonding curve, and charges its launch fee${
-        terms ? ` — currently ${formatEth(terms.launchFeeWei, 6)} ETH` : ""
+        terms ? ` — currently ${formatEth(terms.launchFeeWei, 6)} ${NATIVE_SYMBOL}` : ""
       }. JapanPad does not take a cut, does not hold your funds, and never has custody of the token.`,
     },
     {
@@ -102,20 +102,20 @@ export default async function HowItWorks() {
           </h3>
           {terms ? (
             <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <Row label="Launch fee">{formatEth(terms.launchFeeWei, 6)} ETH</Row>
+              <Row label="Launch fee">{formatEth(terms.launchFeeWei, 6)} {NATIVE_SYMBOL}</Row>
               <Row label="Trade fee">
                 {formatPercent(terms.curveFeeBps / 10_000, 2)}
               </Row>
               <Row label="Supply per token">{formatTokens(terms.supply)}</Row>
               <Row label="Graduation at">
-                {formatEth(terms.graduationThresholdWei, 5)} ETH
+                {formatEth(terms.graduationThresholdWei, 5)} {NATIVE_SYMBOL}
               </Row>
               <Row label="Launching">
                 {terms.launchEnabled && terms.configEnabled
                   ? "Open"
                   : "Paused by Pons"}
               </Row>
-              <Row label="Quote asset">ETH</Row>
+              <Row label="Quote asset">{NATIVE_SYMBOL}</Row>
             </dl>
           ) : (
             <p className="text-sm text-muted leading-relaxed">
@@ -136,7 +136,7 @@ export default async function HowItWorks() {
         <ul className="mt-3 space-y-3 text-sm text-sumi/85">
           <Point>
             <strong>Not a broker or a custodian.</strong> Every action is a transaction
-            your own wallet signs. JapanPad never holds your ETH or your tokens and cannot
+            your own wallet signs. JapanPad never holds your {NATIVE_SYMBOL} or your tokens and cannot
             move either. It will never ask for a recovery phrase — nothing that does is
             this site.
           </Point>

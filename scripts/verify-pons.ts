@@ -13,6 +13,15 @@
  *   npm run verify:pons              # whatever JAPANPAD_NETWORK says
  *   JAPANPAD_NETWORK=mainnet npm run verify:pons
  *
+ * It is also the fastest way to judge a candidate RPC endpoint, which matters
+ * on Arc, where the public one cannot price a trade:
+ *
+ *   JAPANPAD_NETWORK=arc JAPANPAD_RPC_URL=https://... npm run verify:pons
+ *
+ * Name the network as well as the URL. An endpoint serves one chain, and the
+ * script checks eth_chainId before anything else, so a mismatch is reported
+ * rather than acted on.
+ *
  * Exit code 1 means something this repo believes is no longer true. A failure
  * here is not a reason to hardcode around the difference; it is a reason to find
  * out what Pons changed.
@@ -33,7 +42,7 @@ import { createPublicClient, formatEther, http, type Address } from "viem";
  * A verification script that silently checks a different chain than the one you
  * asked for is worse than no script.
  */
-import { CHAIN_PRESETS, type ChainEnv } from "../src/lib/chain.ts";
+import { CHAIN_PRESETS, rpcUrlFor, type ChainEnv } from "../src/lib/chain.ts";
 
 const ENV: ChainEnv = (() => {
   const raw = (process.env.JAPANPAD_NETWORK ?? process.env.NEXT_PUBLIC_JAPANPAD_NETWORK)?.trim();
@@ -155,8 +164,9 @@ function section(title: string) {
 async function main() {
   const preset = CHAIN_PRESETS[ENV];
   const symbol = preset.nativeCurrency.symbol;
-  const rpc =
-    process.env.JAPANPAD_RPC_URL?.trim() || process.env.NEXT_PUBLIC_RPC_URL?.trim() || preset.rpcUrl;
+  // Resolved the same way the app resolves it, per-chain overrides and all, so
+  // that a green run means the endpoint the app will actually use is green.
+  const rpc = rpcUrlFor(ENV);
 
   console.log(`\n\x1b[1mVerifying Pons against ${preset.name}\x1b[0m`);
   console.log(`\x1b[2m${rpc}\x1b[0m`);

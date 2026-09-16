@@ -207,10 +207,88 @@ export const LOGS_CHUNK_LIMIT = preset.logsChunkLimit;
 export const NATIVE_CURRENCY = preset.nativeCurrency;
 export const NATIVE_SYMBOL = preset.nativeCurrency.symbol;
 
-/** A private RPC always wins, so production never leans on the public endpoint. */
-const overrideRpc = process.env.JAPANPAD_RPC_URL ?? process.env.NEXT_PUBLIC_RPC_URL;
-export const RPC_URL =
-  overrideRpc && /^https?:\/\//.test(overrideRpc) ? overrideRpc : preset.rpcUrl;
+/** An endpoint, or null if the value is not one. Half-edited `.env` lines happen. */
+function parseRpcUrl(raw: string | undefined): string | null {
+  const value = raw?.trim();
+  return value && /^https?:\/\//.test(value) ? value : null;
+}
+
+/**
+ * Picks the endpoint a given chain's reads go to.
+ *
+ * The rule that earns its own function is the scope of the un-suffixed override.
+ * `JAPANPAD_RPC_URL` names one endpoint, and an endpoint serves one chain — so
+ * applying it to whichever chain happens to be selected is how Arc reads get
+ * sent to a Robinhood node. That failure is quiet: the node answers, it just
+ * answers about a different chain, so balances and launches come back wrong
+ * rather than missing, which is the shape of bug that survives a demo.
+ *
+ * So the global override belongs to the chain the build targets and nothing
+ * else. Every other chain uses its own variable or its public endpoint.
+ */
+export function resolveRpcUrl(args: {
+  perChain: string | undefined;
+  global: string | undefined;
+  isDefaultChain: boolean;
+  fallback: string;
+}): string {
+  const perChain = parseRpcUrl(args.perChain);
+  if (perChain) return perChain;
+  const global = args.isDefaultChain ? parseRpcUrl(args.global) : null;
+  return global ?? args.fallback;
+}
+
+/**
+ * Per-chain endpoints, spelled out rather than built from a computed key.
+ *
+ * Same constraint as the factory addresses in pons/deployment.ts: Next inlines
+ * `NEXT_PUBLIC_` variables by textually substituting `process.env.NEXT_PUBLIC_FOO`
+ * during the build, so a computed access matches no literal and is undefined in
+ * the browser while working fine on the server. Adding a chain means adding a
+ * line to both records.
+ */
+const PRIVATE_RPC: Record<ChainEnv, string | undefined> = {
+  mainnet: process.env.JAPANPAD_RPC_URL_MAINNET,
+  testnet: process.env.JAPANPAD_RPC_URL_TESTNET,
+  arc: process.env.JAPANPAD_RPC_URL_ARC,
+  "arc-testnet": process.env.JAPANPAD_RPC_URL_ARC_TESTNET,
+  local: process.env.JAPANPAD_RPC_URL_LOCAL,
+};
+
+const PUBLIC_RPC: Record<ChainEnv, string | undefined> = {
+  mainnet: process.env.NEXT_PUBLIC_RPC_URL_MAINNET,
+  testnet: process.env.NEXT_PUBLIC_RPC_URL_TESTNET,
+  arc: process.env.NEXT_PUBLIC_RPC_URL_ARC,
+  "arc-testnet": process.env.NEXT_PUBLIC_RPC_URL_ARC_TESTNET,
+  local: process.env.NEXT_PUBLIC_RPC_URL_LOCAL,
+};
+
+/**
+ * The endpoint reads for `env` go to.
+ *
+ * Layered, private over public: an authenticated endpoint wins where it is
+ * readable, falling through to whatever the browser would use, and finally to
+ * the chain's own public RPC. In the browser the private names are never
+ * inlined and so are always undefined, which is the point — the key stays on
+ * the server and the page still resolves an endpoint.
+ */
+export function rpcUrlFor(env: ChainEnv): string {
+  const isDefaultChain = env === CHAIN_ENV;
+  const published = resolveRpcUrl({
+    perChain: PUBLIC_RPC[env],
+    global: process.env.NEXT_PUBLIC_RPC_URL,
+    isDefaultChain,
+    fallback: PRESETS[env].rpcUrl,
+  });
+  return resolveRpcUrl({
+    perChain: PRIVATE_RPC[env],
+    global: process.env.JAPANPAD_RPC_URL,
+    isDefaultChain,
+    fallback: published,
+  });
+}
+
+export const RPC_URL = rpcUrlFor(CHAIN_ENV);
 
 export const japanpadChain = defineChain({
   id: preset.id,

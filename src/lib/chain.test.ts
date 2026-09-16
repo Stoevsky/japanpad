@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { CHAIN_ENVS, CHAIN_PRESETS, chainConfigError } from "./chain";
+import { CHAIN_ENVS, CHAIN_PRESETS, chainConfigError, resolveRpcUrl } from "./chain";
 
 /**
  * The failure this guards against is not a mismatch between two set values —
@@ -48,6 +48,84 @@ describe("chainConfigError", () => {
     // happens to work. Relying on that coincidence is how the mainnet case
     // ships unnoticed.
     expect(chainConfigError("testnet", null)).not.toBeNull();
+  });
+});
+
+/**
+ * Which endpoint a given chain's reads go to.
+ *
+ * The rule that matters is the scope of the un-suffixed override. JAPANPAD_RPC_URL
+ * names one endpoint, and one endpoint serves one chain — so applying it to
+ * whichever chain happens to be selected is how Arc reads get sent to a
+ * Robinhood node. That failure is quiet and nasty: the endpoint answers, it just
+ * answers about a different chain, so balances and launches come back wrong
+ * rather than missing.
+ *
+ * So the global override belongs to the chain the build targets, and every other
+ * chain uses its own variable or its public endpoint.
+ */
+describe("resolveRpcUrl", () => {
+  const fallback = "https://public.example";
+
+  test("a chain's own endpoint wins over everything", () => {
+    expect(
+      resolveRpcUrl({
+        perChain: "https://arc.private",
+        global: "https://robinhood.private",
+        isDefaultChain: true,
+        fallback,
+      }),
+    ).toBe("https://arc.private");
+  });
+
+  test("the global override applies to the chain the build targets", () => {
+    expect(
+      resolveRpcUrl({
+        perChain: undefined,
+        global: "https://robinhood.private",
+        isDefaultChain: true,
+        fallback,
+      }),
+    ).toBe("https://robinhood.private");
+  });
+
+  test("the global override does NOT leak to other chains", () => {
+    // The whole point. Switching to Arc with only JAPANPAD_RPC_URL set must not
+    // send Arc's reads to the Robinhood node it names.
+    expect(
+      resolveRpcUrl({
+        perChain: undefined,
+        global: "https://robinhood.private",
+        isDefaultChain: false,
+        fallback,
+      }),
+    ).toBe(fallback);
+  });
+
+  test("falls back to the public endpoint when nothing is configured", () => {
+    expect(
+      resolveRpcUrl({ perChain: undefined, global: undefined, isDefaultChain: true, fallback }),
+    ).toBe(fallback);
+  });
+
+  test("ignores a value that is not an http(s) URL", () => {
+    // A half-edited .env line should not become the endpoint every read goes to.
+    for (const junk of ["", "   ", "rpc.example.com", "wss://arc.example", "ws://x"]) {
+      expect(
+        resolveRpcUrl({ perChain: junk, global: undefined, isDefaultChain: true, fallback }),
+      ).toBe(fallback);
+    }
+  });
+
+  test("tolerates surrounding whitespace", () => {
+    expect(
+      resolveRpcUrl({
+        perChain: "  https://arc.private  ",
+        global: undefined,
+        isDefaultChain: false,
+        fallback,
+      }),
+    ).toBe("https://arc.private");
   });
 });
 

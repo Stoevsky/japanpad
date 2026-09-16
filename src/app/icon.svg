@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    Favicon. The same Fuji as components/Logo.tsx with the cap notch and water
+    line removed, because both turn to mush at 16px.
+
+    It carries its own ivory tile rather than sitting transparent: a vermilion
+    silhouette alone vanishes against a dark tab strip, and the tile is the
+    paper colour the whole site is built on.
+  -->
+  <rect width="32" height="32" rx="7" fill="#f7f1e7"/>
+  <circle cx="22" cy="12" r="5.5" fill="#c8a35d" opacity="0.6"/>
+  <path
+    d="M3 25.2C7.8 24.6 11.2 18.2 14 13.1L16 9.2L18 13.1C20.8 18.2 24.2 24.6 29 25.2Z"
+    fill="#a82632"/>
+</svg>

@@ -1,0 +1,238 @@
+@import "tailwindcss";
+
+/**
+ * JapanPad's palette.
+ *
+ * Deliberately not ChinaPad's yellow-and-red: this is warm ivory paper, a deep
+ * vermilion drawn from torii lacquer rather than a flag red, and a charcoal
+ * that reads as sumi ink rather than black. Sakura and gold are accents with a
+ * budget — a few per screen — because the reference is Japanese stationery and
+ * editorial layout, not a festival poster.
+ */
+@theme {
+  --color-ivory: #f7f1e7;
+  --color-paper: #fff9f0;
+  --color-sumi: #271e1c;
+  --color-vermilion: #a82632;
+  --color-vermilion-soft: #c14350;
+  --color-muted: #8a7770;
+  --color-sakura: #dfa6af;
+  --color-gold: #c8a35d;
+  --color-rule: #e6dccd;
+
+  --font-display: var(--font-mincho), ui-serif, Georgia, serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --radius-card: 14px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/**
+ * Japanese glyphs.
+ *
+ * The Latin webfonts load the latin subset only, so they carry no kana or kanji
+ * at all — anything Japanese falls through to this stack. That was already
+ * happening before it was written down; naming it turns an accident into a
+ * decision, and puts a real mincho first on every platform that ships one.
+ */
+.jp {
+  font-family: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho",
+    YuMincho, "Noto Serif JP", "MS PMincho", serif;
+  font-weight: 400;
+}
+
+/**
+ * On-chain numbers.
+ *
+ * Every figure this site shows is read off a contract — fees, reserves, supply,
+ * percentages, addresses. Tabular mono means a column of them aligns on the
+ * decimal, and that a digit changing on re-quote does not reflow the row it
+ * sits in. Proportional numerals in a body sans are what made these read like
+ * blog text rather than instrument readings.
+ */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+
+/* Eyebrow label: above sections, and beside values in a spec row. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+body {
+  background-color: var(--color-ivory);
+  color: var(--color-sumi);
+  font-family: var(--font-sans);
+  /**
+   * Paper grain. Two barely-visible radial washes rather than a noise image —
+   * it costs no request, survives dark-mode inversion, and at 3% alpha it reads
+   * as texture instead of decoration.
+   */
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(223, 166, 175, 0.07), transparent 42%),
+    radial-gradient(circle at 88% 4%, rgba(200, 163, 93, 0.06), transparent 38%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--color-sakura);
+  color: var(--color-sumi);
+}
+
+/* Seigaiha — the wave pattern, as a hairline rule rather than a fill. */
+.wave-rule {
+  height: 10px;
+  background-image: repeating-radial-gradient(
+    circle at 10px 12px,
+    transparent 0 7px,
+    var(--color-rule) 7px 8px,
+    transparent 8px 20px
+  );
+  background-size: 20px 12px;
+}
+
+.card {
+  background-color: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* Gold hairline on hover, for cards that are themselves links. */
+.card-link:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 60%, transparent);
+  box-shadow: 0 2px 14px -8px color-mix(in srgb, var(--color-sumi) 35%, transparent);
+  transform: translateY(-1px);
+}
+
+/**
+ * The hero surface.
+ *
+ * Three stacked layers, and the order is load-bearing. The scrim sits on top so
+ * text stays legible; the photograph sits under it; a painted sunset sits at
+ * the bottom. If /hero.jpg is missing or fails, that middle layer simply does
+ * not paint and the sunset shows through — the section degrades to a gradient
+ * instead of a broken-image icon. Same rule the chain reads follow: when
+ * something cannot be had, show an honest lesser thing rather than a failure.
+ *
+ * The photograph is a variable so a section can swap it — a theme page could
+ * set its own — and so the fallback path is written once here rather than
+ * repeated at each call site.
+ */
+.hero-surface {
+  --hero-photo: url("/hero.jpg");
+  background-color: #2a1a20;
+  background-image:
+    linear-gradient(
+      100deg,
+      rgba(28, 16, 20, 0.92) 0%,
+      rgba(34, 20, 24, 0.72) 38%,
+      rgba(40, 24, 26, 0.28) 68%,
+      rgba(40, 24, 26, 0.12) 100%
+    ),
+    var(--hero-photo, none),
+    linear-gradient(170deg, #3b2540 0%, #7c3e49 34%, #c2665a 62%, #e9a06b 100%);
+  background-size: cover;
+  background-position: center 42%;
+  background-repeat: no-repeat;
+}
+
+/*
+ * Labels inside the hero sit on a photograph rather than on paper, so the muted
+ * brown that works everywhere else goes invisible. Scoped rather than made into
+ * a `.label-on-dark` variant, because the hero is the only dark surface here and
+ * a variant nobody else uses is just a second thing to keep in sync.
+ */
+.hero-surface .label {
+  color: color-mix(in srgb, var(--color-ivory) 62%, transparent);
+}
+
+/* Section heading: vertical Japanese marker, rule, then the English title. */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.section-head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    var(--color-rule),
+    transparent
+  );
+}
+
+/*
+ * Form inputs. One class rather than a repeated Tailwind run, because every
+ * field on the launch form has to look identical — a token's name, symbol and
+ * description are written once and then live on chain forever, and a form that
+ * looks casual invites casual input.
+ */
+.field {
+  width: 100%;
+  background-color: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--color-sumi);
+  transition: border-color 0.15s ease;
+}
+
+.field::placeholder {
+  color: color-mix(in srgb, var(--color-muted) 65%, transparent);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--color-vermilion);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-vermilion) 12%, transparent);
+}
+
+/* Vertical Japanese label, used sparingly for section markers. */
+.tate {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.22em;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}

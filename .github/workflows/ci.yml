@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Note what is deliberately absent: `npm run verify:pons`.
+#
+# That script reads the live chain, so it fails when Robinhood's RPC is having a
+# bad minute and when Pons's owner changes a fee — neither of which is a reason
+# to block a pull request. It is a pre-deploy check a human reads the output of,
+# not a gate. See the checklist in README.md.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      # Testnet, and with both network variables set — the app refuses to boot
+      # on a one-sided config, which is the point of the check and would
+      # otherwise only be discovered on a deploy.
+      - run: npm run build
+        env:
+          JAPANPAD_NETWORK: testnet
+          NEXT_PUBLIC_JAPANPAD_NETWORK: testnet

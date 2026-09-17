@@ -1,0 +1,9 @@
+{
+  "blurb": "An interface to the Pons protocol. The launching, the pricing and the liquidity are all Pons — this site is discovery and presentation over the top of it.",
+  "browse": "Browse",
+  "start": "Start",
+  "launchToken": "Launch a token",
+  "readTerms": "Read the terms",
+  "disclaimer": "JapanPad launches are user-created crypto tokens themed around Japanese culture. They are not shares, are not affiliated with or endorsed by any company a creator may reference, and confer no ownership, dividends, voting rights, or claim on any business. Tokens are created and traded through the Pons protocol on {chain}; JapanPad never takes custody of funds and every transaction is signed by your own wallet.",
+  "builtOn": "Built on Pons · {chain}"
+}

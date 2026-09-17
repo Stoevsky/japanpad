@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { NATIVE_SYMBOL } from "@/lib/chain";
 import { getTheme } from "@/lib/themes";
 import { formatEth, formatPercent, safeImageUrl, shortAddress } from "@/lib/format";

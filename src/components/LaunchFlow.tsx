@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { parseEventLogs, type Address } from "viem";
 import { CHAIN_NAME, NATIVE_SYMBOL, txUrl } from "@/lib/chain";
 import { formatEth, formatTokens } from "@/lib/format";
@@ -10,7 +10,7 @@ import { ponsV2FactoryAbi } from "@/lib/pons/abi";
 import { LAUNCH_CONFIG_ID, NATIVE_QUOTE, PONS_FACTORY } from "@/lib/pons/deployment";
 import { THEMES, getTheme } from "@/lib/themes";
 import { txPhaseLabel, useTx } from "@/lib/tx";
-import { prepareLaunch, type LaunchDraft, type LaunchPlan } from "@/app/launch/actions";
+import { prepareLaunch, type LaunchDraft, type LaunchPlan } from "@/lib/launch/actions";
 import { useWallet } from "./WalletProvider";
 import { WalletButton } from "./WalletButton";
 import { StockPicker } from "./StockPicker";

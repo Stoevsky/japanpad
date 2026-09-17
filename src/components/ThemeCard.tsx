@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import type { Theme } from "@/lib/themes";
 
 export function ThemeCard({ theme, count }: { theme: Theme; count?: number }) {

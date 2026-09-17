@@ -23,6 +23,34 @@ export function parseAddress(raw: string | undefined): Address | null {
 }
 
 /**
+ * The block JapanPad's first launch landed in, per network.
+ *
+ * This exists because a lookback window cannot work on this chain. Robinhood
+ * Chain produces roughly fifteen blocks a second — measured, not assumed: head
+ * moved 2,226 blocks in the ~150s between two probes — so the 400,000-block
+ * window this replaces covered about seven hours. $TOYOTA was already an hour
+ * from falling out of it, and would have disappeared from the site on its own.
+ *
+ * A launch older than JapanPad's first launch cannot be JapanPad's, so this is
+ * a floor rather than a heuristic, and it does not slide. The mainnet value is
+ * measured: scanning blocks 64,000,000 to 64,870,000 turned up 11,626 Pons
+ * launches and exactly one tagged coin, $TOYOTA at 64,869,238. Nothing of ours
+ * exists in the 869,000 blocks before it.
+ *
+ * Set NEXT_PUBLIC_SCAN_FROM_BLOCK to override. Lower is always safe and only
+ * costs scan time; higher hides coins.
+ */
+const GENESIS: Record<ChainEnv, bigint | null> = {
+  mainnet: 64_869_000n,
+  testnet: null,
+  arc: null,
+  "arc-testnet": null,
+  local: null,
+};
+
+export const GENESIS_BLOCK: bigint | null = GENESIS[CHAIN_ENV];
+
+/**
  * Per-chain factory configuration, read literally rather than by computed key.
  *
  * This shape looks redundant and is not. Next inlines `NEXT_PUBLIC_` variables

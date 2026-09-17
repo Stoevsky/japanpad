@@ -3,7 +3,8 @@ import { parseAbiItem, type Address } from "viem";
 import { LOGS_CHUNK_LIMIT, MULTICALL3 } from "../chain";
 import { ponsV2CurveAbi, ponsV2TokenAbi } from "./abi";
 import { isMissingContract, logRpcFailure, publicClient } from "./client";
-import { NATIVE_QUOTE, PONS_FACTORY } from "./deployment";
+import { GENESIS_BLOCK, NATIVE_QUOTE, PONS_FACTORY } from "./deployment";
+import { MAX_SCANNED, scanStop, scanWasComplete, type ScanStop } from "./scan";
 import { parseStockTag, parseThemeTag, withoutThemeTag } from "./tag";
 
 /**
@@ -35,6 +36,24 @@ const TOKEN_LAUNCHED = parseAbiItem(
  * later point you are willing to start history from.
  */
 const SCAN_FROM_BLOCK = process.env.NEXT_PUBLIC_SCAN_FROM_BLOCK?.trim();
+
+/**
+ * The oldest block worth reading, and why the default is not a lookback.
+ *
+ * Identifying a JapanPad coin costs a description read per Pons launch, so the
+ * scan's cost is set by Pons's volume rather than ours — 6,068 launches in a
+ * 400,000-block window, five of them JapanPad's. A window sized in blocks
+ * therefore prices in an enormous amount of history that cannot contain an
+ * answer, because JapanPad has no launch older than JapanPad's first launch.
+ *
+ * Starting at that block is not a heuristic; it is the earliest point a result
+ * can exist. Everything before it is guaranteed to be somebody else's coin.
+ */
+function scanFloor(head: bigint): bigint {
+  if (SCAN_FROM_BLOCK) return BigInt(SCAN_FROM_BLOCK);
+  if (GENESIS_BLOCK !== null) return GENESIS_BLOCK;
+  return head > DEFAULT_LOOKBACK ? head - DEFAULT_LOOKBACK : 0n;
+}
 /**
  * The scan chunk, which is the chain's business and not this module's.
  *
@@ -98,25 +117,97 @@ interface RawLaunch {
   blockNumber: bigint;
 }
 
-/** Pons's TokenLaunched logs, newest first, over the configured window. */
-async function fetchLaunchLogs(limit: number): Promise<RawLaunch[]> {
-  if (!PONS_FACTORY) return [];
+/**
+ * One decoded `TokenLaunched` log. Named via the call that produces it so the
+ * decoded `args` shape stays tied to TOKEN_LAUNCHED rather than being restated.
+ */
+type LaunchLog = Awaited<
+  ReturnType<typeof publicClient.getLogs<typeof TOKEN_LAUNCHED>>
+>[number];
+
+interface Tagged {
+  raw: RawLaunch;
+  themeId: string;
+  stockTicker: string | null;
+  description: string;
+}
+
+/**
+ * Which of these Pons launches are JapanPad's.
+ *
+ * Reads one field per launch, not four. The theme tag lives in `description`,
+ * so that is the only field needed to answer the question — and since ours are
+ * a fraction of a percent of the feed, fetching name/symbol/logo here would
+ * spend 99% of the calls on coins about to be discarded. The survivors get
+ * their metadata read afterwards, in `hydrate`.
+ */
+async function tagJapanPad(raw: RawLaunch[]): Promise<Tagged[]> {
+  if (raw.length === 0) return [];
+  const multicall = MULTICALL3 ? { multicallAddress: MULTICALL3 } : {};
+
+  const descriptions = await publicClient.multicall({
+    ...multicall,
+    allowFailure: true,
+    contracts: raw.map(
+      (r) =>
+        ({ address: r.token, abi: ponsV2TokenAbi, functionName: "description" }) as const,
+    ),
+  });
+
+  const out: Tagged[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const d = descriptions[i];
+    if (d?.status !== "success") continue;
+    const text = String(d.result);
+    const themeId = parseThemeTag(text);
+    if (!themeId) continue; // Somebody else's coin.
+    const r = raw[i];
+    if (!r) continue;
+    out.push({
+      raw: r,
+      themeId,
+      stockTicker: parseStockTag(text),
+      description: withoutThemeTag(text),
+    });
+  }
+  return out;
+}
+
+interface ScanResult {
+  tagged: Tagged[];
+  /** False when history was truncated, so the caller never implies otherwise. */
+  complete: boolean;
+}
+
+/**
+ * Walks back through Pons's launches until it has `limit` of ours.
+ *
+ * Backwards, so the newest are found first and a long history does not have to
+ * be read before anything renders. Each chunk's launches are identified as they
+ * are found rather than after the whole walk, so the loop can stop as soon as
+ * the page is full instead of reading to the floor every time.
+ *
+ * The stopping rule is in scan.ts and is the fix for the bug this replaces: the
+ * old budget was `limit * 4` *raw* launches, which on a feed where JapanPad is
+ * 0.08% of volume ran out three coins in and reported the result complete.
+ */
+async function scanForLaunches(limit: number): Promise<ScanResult> {
+  if (!PONS_FACTORY) return { tagged: [], complete: false };
 
   const head = await publicClient.getBlockNumber();
-  const floor = SCAN_FROM_BLOCK
-    ? BigInt(SCAN_FROM_BLOCK)
-    : head > DEFAULT_LOOKBACK
-      ? head - DEFAULT_LOOKBACK
-      : 0n;
+  const floor = scanFloor(head);
 
-  const out: RawLaunch[] = [];
+  const tagged: Tagged[] = [];
+  let scanned = 0;
+  let refused = false;
   let to = head;
+  let stop: ScanStop | null = null;
 
-  // Walk backwards so the newest launches are found first and a large history
-  // does not have to be read before anything can be rendered.
-  while (to >= floor && out.length < limit * 4) {
+  while (stop === null && to >= floor) {
     const from = to > floor + CHUNK ? to - CHUNK : floor;
-    let logs;
+    const atFloor = from === floor;
+
+    let logs: LaunchLog[] = [];
     try {
       logs = await publicClient.getLogs({
         address: PONS_FACTORY,
@@ -125,18 +216,19 @@ async function fetchLaunchLogs(limit: number): Promise<RawLaunch[]> {
         toBlock: to,
       });
     } catch {
-      // A range the node refuses is skipped rather than failing the page. The
-      // listing is then incomplete, which the caller surfaces as a partial
-      // result — never as an empty one that looks like "no launches yet".
-      if (from === floor) break;
-      to = from - 1n;
-      continue;
+      // A range the node refuses is skipped rather than failing the page, but
+      // it is remembered: the listing is then missing blocks it never read, and
+      // saying so is the difference between "that is all of them" and "that is
+      // all I could see".
+      refused = true;
+      logs = [];
     }
 
+    const raw: RawLaunch[] = [];
     for (const log of logs.reverse()) {
       const a = log.args;
       if (!a.token || !a.curve || !a.deployer) continue;
-      out.push({
+      raw.push({
         token: a.token,
         curve: a.curve,
         deployer: a.deployer,
@@ -145,63 +237,52 @@ async function fetchLaunchLogs(limit: number): Promise<RawLaunch[]> {
       });
     }
 
-    if (from === floor) break;
+    tagged.push(...(await tagJapanPad(raw)));
+    scanned += raw.length;
+
+    stop = scanStop({
+      found: tagged.length,
+      wanted: limit,
+      scanned,
+      atFloor,
+      maxScanned: MAX_SCANNED,
+    });
+    if (stop !== null) break;
     to = from - 1n;
   }
 
-  return out.sort((x, y) => (y.blockNumber > x.blockNumber ? 1 : -1));
+  tagged.sort((x, y) => (y.raw.blockNumber > x.raw.blockNumber ? 1 : -1));
+  return {
+    tagged,
+    complete: !refused && (stop === null || scanWasComplete(stop)),
+  };
 }
 
 /**
- * Hydrates raw logs into summaries, keeping only JapanPad-tagged launches.
+ * Fills in everything the cards render, for launches already known to be ours.
  *
- * Every read is batched through Multicall3 where the chain has one, so a page
- * of twenty coins costs a few round trips rather than a hundred.
+ * Runs after `tagJapanPad` has narrowed the feed, so every read here lands on a
+ * coin that will actually be displayed. Batched through Multicall3 where the
+ * chain has one, so a page of twenty coins costs a few round trips.
  */
-async function hydrate(raw: RawLaunch[], limit: number): Promise<LaunchSummary[]> {
-  if (raw.length === 0) return [];
+async function hydrate(tagged: Tagged[]): Promise<LaunchSummary[]> {
+  if (tagged.length === 0) return [];
 
   const multicall = MULTICALL3 ? { multicallAddress: MULTICALL3 } : {};
 
+  const META = 3;
   const meta = await publicClient.multicall({
     ...multicall,
     allowFailure: true,
-    contracts: raw.flatMap((r) => [
-      { address: r.token, abi: ponsV2TokenAbi, functionName: "description" } as const,
-      { address: r.token, abi: ponsV2TokenAbi, functionName: "name" } as const,
-      { address: r.token, abi: ponsV2TokenAbi, functionName: "symbol" } as const,
-      { address: r.token, abi: ponsV2TokenAbi, functionName: "logo" } as const,
+    contracts: tagged.flatMap((t) => [
+      { address: t.raw.token, abi: ponsV2TokenAbi, functionName: "name" } as const,
+      { address: t.raw.token, abi: ponsV2TokenAbi, functionName: "symbol" } as const,
+      { address: t.raw.token, abi: ponsV2TokenAbi, functionName: "logo" } as const,
     ]),
   });
 
-  const tagged: Array<{ raw: RawLaunch; themeId: string; stockTicker: string | null; name: string; symbol: string; logo: string; description: string }> = [];
-
-  for (let i = 0; i < raw.length; i++) {
-    const description = meta[i * 4];
-    if (description?.status !== "success") continue;
-    const themeId = parseThemeTag(String(description.result));
-    if (!themeId) continue; // Not a JapanPad launch.
-
-    const name = meta[i * 4 + 1];
-    const symbol = meta[i * 4 + 2];
-    const logo = meta[i * 4 + 3];
-    const r = raw[i];
-    if (!r) continue;
-
-    tagged.push({
-      raw: r,
-      themeId,
-      stockTicker: parseStockTag(String(description.result)),
-      name: name?.status === "success" ? String(name.result) : "",
-      symbol: symbol?.status === "success" ? String(symbol.result) : "",
-      logo: logo?.status === "success" ? String(logo.result) : "",
-      description: withoutThemeTag(String(description.result)),
-    });
-
-    if (tagged.length >= limit) break;
-  }
-
-  if (tagged.length === 0) return [];
+  const text = (i: number): string =>
+    meta[i]?.status === "success" ? String(meta[i]!.result) : "";
 
   const FIELDS = 4;
   const state = await publicClient.multicall({
@@ -243,9 +324,9 @@ async function hydrate(raw: RawLaunch[], limit: number): Promise<LaunchSummary[]
       deployer: t.raw.deployer,
       themeId: t.themeId,
       stockTicker: t.stockTicker,
-      name: t.name,
-      symbol: t.symbol,
-      logo: t.logo,
+      name: text(i * META),
+      symbol: text(i * META + 1),
+      logo: text(i * META + 2),
       description: t.description,
       blockNumber: t.raw.blockNumber,
       launchedAt: null,
@@ -282,10 +363,13 @@ export async function listLaunches(
   }
 
   try {
-    const raw = await fetchLaunchLogs(limit);
-    const all = await hydrate(raw, opts.themeId ? limit * 3 : limit);
+    // Under a theme filter the scan still has to find enough coins overall to
+    // fill a page of that one theme, so it is asked for more than the caller
+    // wants and the surplus is discarded after filtering.
+    const { tagged, complete } = await scanForLaunches(opts.themeId ? limit * 3 : limit);
+    const all = await hydrate(tagged);
     const launches = opts.themeId ? all.filter((l) => l.themeId === opts.themeId) : all;
-    return { launches: launches.slice(0, limit), complete: true, readAt };
+    return { launches: launches.slice(0, limit), complete, readAt };
   } catch (e) {
     // The chain is the only source of truth here, so an RPC failure is reported
     // as unavailable rather than smoothed over with an empty list.

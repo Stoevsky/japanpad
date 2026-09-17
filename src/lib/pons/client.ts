@@ -45,7 +45,19 @@ const TRANSPORT = {
   timeout: 6_000,
 } as const;
 
-const CLIENTS = new Map<ChainEnv, ReturnType<typeof createPublicClient>>();
+/**
+ * Split out so the cache can be typed by what this actually returns.
+ * `ReturnType<typeof createPublicClient>` resolves with the generic defaults,
+ * which is a different and incompatible type from the client built here.
+ */
+function createClient(env: ChainEnv) {
+  return createPublicClient({
+    chain: chainFor(env),
+    transport: http(rpcUrlFor(env), TRANSPORT),
+  });
+}
+
+const CLIENTS = new Map<ChainEnv, ReturnType<typeof createClient>>();
 
 /**
  * The client for one chain, built once.
@@ -59,13 +71,10 @@ const CLIENTS = new Map<ChainEnv, ReturnType<typeof createPublicClient>>();
  * answers, about a Robinhood address — so the failure mode of getting this
  * wrong is wrong data on a page with a trade panel, not a visible error.
  */
-export function clientFor(env: ChainEnv) {
+export function clientFor(env: ChainEnv): ReturnType<typeof createClient> {
   const existing = CLIENTS.get(env);
   if (existing) return existing;
-  const client = createPublicClient({
-    chain: chainFor(env),
-    transport: http(rpcUrlFor(env), TRANSPORT),
-  });
+  const client = createClient(env);
   CLIENTS.set(env, client);
   return client;
 }

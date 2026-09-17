@@ -1,1 +1,100 @@
-{}
+{
+  "hero": {
+    "eyebrow": "Built on Pons · {chain}",
+    "tagline": "Japan comes onchain.",
+    "body": "Pick a theme, measure it against a Tokyo listing, and launch through Pons on {chain}. Your wallet signs everything; JapanPad never holds your funds.",
+    "ctaLaunch": "Launch a token",
+    "ctaExplore": "Explore launches",
+    "statListings": "{count, plural, one {# Tokyo listing} other {# Tokyo listings}}",
+    "statThemes": "{count, plural, one {# theme} other {# themes}}",
+    "statSettles": "Settles in {symbol}"
+  },
+  "terms": {
+    "unavailable": "Pons terms are unavailable right now — the chain could not be read. Nothing is shown rather than a guessed fee.",
+    "launchFee": "Launch fee",
+    "supply": "Supply",
+    "graduatesAt": "Graduates at",
+    "curveFee": "Curve fee"
+  },
+  "provenance": {
+    "theme": "Theme",
+    "disclaimer": "JapanPad launches are user-created crypto tokens themed around Japanese culture. They are not shares in any company, are not affiliated with or endorsed by any company a creator may reference, and confer no ownership, dividends, voting rights, or claim on any business."
+  },
+  "steps": {
+    "heading": "Four steps, one signature",
+    "sub": "Nothing here is custodial and nothing here is reviewed.",
+    "more": "In detail",
+    "one": {
+      "title": "Pick a theme",
+      "body": "Ten corners of Japanese culture. The theme is a category and a colour — it references no company and carries no price."
+    },
+    "two": {
+      "title": "Choose a yardstick",
+      "body": "Optionally measure your market cap against one of {count} Tokyo listings. The price is read live from the exchange feed at the moment you pick."
+    },
+    "three": {
+      "title": "Sign the launch",
+      "body": "Your wallet sends one transaction to Pons. JapanPad never touches it, never holds the token, and never takes a cut."
+    },
+    "four": {
+      "title": "Trade, then graduate",
+      "body": "The curve prices every buy and sell in {symbol}. At the threshold, Pons moves the liquidity into a permanently locked Uniswap v4 pool."
+    }
+  },
+  "denomination": {
+    "heading": "Measured in Tokyo, settled in {symbol}",
+    "sub": "A yardstick, not a claim.",
+    "isLabel": "What it is",
+    "isBodyOne": "A creator can pick one of {count} Tokyo Stock Exchange listings as the unit their market cap is quoted in, the way a chart can be drawn in dollars or in yen. The price comes from a public market-data feed at the moment it is read, and the ticker is recorded in the token’s own description on chain.",
+    "isBodyTwo": "Company names and prices are never written into this site’s source. Only the ticker is. If the feed does not answer for a listing, that listing is simply not offered.",
+    "isNotLabel": "What it is not",
+    "notBacking": "Not backing. No company holds anything on a coin's behalf.",
+    "notOwnership": "Not ownership. No shares, dividends, or voting rights.",
+    "notRedeemable": "Not redeemable. A coin cannot be exchanged for stock.",
+    "notAffiliation": "Not affiliation. No listed company is involved with JapanPad.",
+    "notLinked": "Not linked in price. The curve trades in {symbol}; the two move apart."
+  },
+  "assurances": {
+    "heading": "What this site will not do",
+    "sub": "The constraints are the product.",
+    "custody": {
+      "title": "Never custodial",
+      "body": "No deposits, no hot wallet, no withdrawal queue. Every transaction is signed in your own wallet and sent to Pons directly."
+    },
+    "fees": {
+      "title": "No cut on top",
+      "body": "Pons charges its launch fee and its trade fee. JapanPad adds nothing, and the creator fee slot points at the creator."
+    },
+    "data": {
+      "title": "No invented numbers",
+      "body": "Prices, reserves, progress and fees are read at request time. When a source is down, this site says so instead of guessing."
+    },
+    "vetting": {
+      "title": "Nothing is vetted",
+      "body": "A theme and a ticker are labels a creator typed. JapanPad curates presentation, not merit — none of this is a recommendation."
+    }
+  },
+  "launches": {
+    "heading": "Recent launches",
+    "sub": "Read live from Pons on {chain}.",
+    "more": "See all",
+    "unavailableTitle": "Launch data is unavailable right now.",
+    "unavailableBody": "The chain could not be read at {readAt}. Nothing is shown rather than a stale or invented list.",
+    "emptyTitle": "No launches yet.",
+    "emptyBody": "Nothing has been launched through JapanPad on {chain} so far.",
+    "beFirst": "Be the first"
+  },
+  "themes": {
+    "heading": "Themes",
+    "sub": "Ten corners of Japanese culture to launch under.",
+    "more": "All themes"
+  },
+  "band": {
+    "tagline": "Launch tokens measured against Japanese stocks.",
+    "ctaLaunch": "Launch a token",
+    "ctaExplore": "Explore",
+    "denominationsLabel": "Denominations · Tokyo Stock Exchange",
+    "counts": "<num>+{rest} more</num> · <num>{total}</num> listings across <num>{themes}</num> themes · every one quoted live, none stored in this site",
+    "disclaimer": "JapanPad is not affiliated with Robinhood, with the Tokyo Stock Exchange, or with any company named above. Choosing a listing sets the unit a token’s market cap is displayed in and nothing more — it is not backing, ownership, affiliation, or a claim on any business, and the token is not redeemable for shares. Tokens launched here are user-created, unreviewed, and carry risk including total loss. They may not be available in your region. Nothing here is investment advice."
+  }
+}

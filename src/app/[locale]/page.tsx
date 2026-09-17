@@ -1,5 +1,6 @@
 import { Link } from "@/i18n/routing";
 import { Suspense } from "react";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CHAIN_NAME, NATIVE_SYMBOL } from "@/lib/chain";
 import { THEMES } from "@/lib/themes";
 import { listLaunches } from "@/lib/pons/read";
@@ -23,12 +24,14 @@ export const revalidate = 30;
  * it at size and disappears at small sizes; the eyebrow is mono because it is
  * a label, and the site sets every label in mono.
  */
-function Hero() {
+async function Hero() {
+  const t = await getTranslations("landing");
+
   return (
     <section className="hero-surface relative min-h-[78vh] flex items-end">
       <div className="relative mx-auto w-full max-w-6xl px-5 pt-28 pb-14">
         <div className="max-w-2xl">
-          <p className="rise label">Built on Pons · {CHAIN_NAME}</p>
+          <p className="rise label">{t("hero.eyebrow", { chain: CHAIN_NAME })}</p>
 
           <h1
             className="rise font-display text-6xl sm:text-8xl font-bold tracking-tight mt-4 text-ivory leading-[0.95]"
@@ -49,16 +52,14 @@ function Hero() {
             className="rise font-display text-2xl sm:text-3xl mt-5 text-ivory/90"
             style={{ animationDelay: "160ms" }}
           >
-            Japan comes onchain.
+            {t("hero.tagline")}
           </p>
 
           <p
             className="rise mt-4 max-w-lg text-ivory/70 leading-relaxed"
             style={{ animationDelay: "200ms" }}
           >
-            Pick a theme, measure it against a Tokyo listing, and launch through
-            Pons on {CHAIN_NAME}. Your wallet signs everything; JapanPad never
-            holds your funds.
+            {t("hero.body", { chain: CHAIN_NAME })}
           </p>
 
           {/* Sits between the copy and the CTAs, so it is the middle of the
@@ -75,13 +76,13 @@ function Hero() {
               href="/launch"
               className="px-6 py-3 rounded-full bg-vermilion text-paper hover:bg-vermilion-soft transition-colors"
             >
-              Launch a token
+              {t("hero.ctaLaunch")}
             </Link>
             <Link
               href="/explore"
               className="px-6 py-3 rounded-full border border-ivory/30 text-ivory hover:bg-ivory/10 hover:border-ivory/60 transition-colors"
             >
-              Explore launches
+              {t("hero.ctaExplore")}
             </Link>
           </div>
 
@@ -95,19 +96,19 @@ function Hero() {
             style={{ animationDelay: "320ms" }}
           >
             {[
-              `${STOCK_CATALOG.length} Tokyo listings`,
-              `${THEMES.length} themes`,
-              `Settles in ${NATIVE_SYMBOL}`,
-            ].map((t) => (
+              t("hero.statListings", { count: STOCK_CATALOG.length }),
+              t("hero.statThemes", { count: THEMES.length }),
+              t("hero.statSettles", { symbol: NATIVE_SYMBOL }),
+            ].map((chip) => (
               <span
-                key={t}
+                key={chip}
                 className="bubble text-ivory/80"
                 style={{
                   borderColor: "rgba(247, 241, 231, 0.22)",
                   backgroundColor: "rgba(247, 241, 231, 0.08)",
                 }}
               >
-                {t}
+                {chip}
               </span>
             ))}
           </div>
@@ -126,27 +127,27 @@ function Hero() {
  * hardcoded and the strip says "unavailable" rather than guessing.
  */
 async function TermsStrip() {
+  const t = await getTranslations("landing");
   const terms = await readLaunchTerms();
 
   if (!terms) {
     return (
       <div className="border-b border-rule/70 bg-paper/60">
         <div className="mx-auto max-w-6xl px-5 py-4 text-xs text-muted">
-          Pons terms are unavailable right now — the chain could not be read.
-          Nothing is shown rather than a guessed fee.
+          {t("terms.unavailable")}
         </div>
       </div>
     );
   }
 
   const items = [
-    { label: "Launch fee", value: `${formatEth(terms.launchFeeWei, 6)} ${NATIVE_SYMBOL}` },
-    { label: "Supply", value: formatTokens(terms.supply) },
+    { label: t("terms.launchFee"), value: `${formatEth(terms.launchFeeWei, 6)} ${NATIVE_SYMBOL}` },
+    { label: t("terms.supply"), value: formatTokens(terms.supply) },
     {
-      label: "Graduates at",
+      label: t("terms.graduatesAt"),
       value: `${formatEth(terms.graduationThresholdWei, 4)} ${NATIVE_SYMBOL}`,
     },
-    { label: "Curve fee", value: formatPercent(terms.curveFeeBps / 10_000, 2) },
+    { label: t("terms.curveFee"), value: formatPercent(terms.curveFeeBps / 10_000, 2) },
   ];
 
   return (
@@ -179,12 +180,14 @@ function TermsSkeleton() {
 }
 
 /** Theme → JapanPad → Robinhood Chain, drawn as one quiet line. */
-function Provenance() {
+async function Provenance() {
+  const t = await getTranslations("landing");
+
   return (
     <section className="mx-auto max-w-6xl px-5 pt-14">
       <div className="flex items-center gap-3 text-xs text-muted" aria-hidden>
         <span className="px-2.5 py-1 rounded-full border border-rule bg-paper">
-          Theme
+          {t("provenance.theme")}
         </span>
         <span className="h-px flex-1 max-w-14 bg-gradient-to-r from-rule to-vermilion/50" />
         <span className="px-2.5 py-1 rounded-full border border-vermilion/40 bg-paper text-vermilion">
@@ -197,10 +200,7 @@ function Provenance() {
       </div>
 
       <p className="mt-8 max-w-2xl text-xs text-muted/90 leading-relaxed border-l-2 border-rule pl-4">
-        JapanPad launches are user-created crypto tokens themed around Japanese
-        culture. They are not shares in any company, are not affiliated with or
-        endorsed by any company a creator may reference, and confer no ownership,
-        dividends, voting rights, or claim on any business.
+        {t("provenance.disclaimer")}
       </p>
     </section>
   );
@@ -279,31 +279,33 @@ function Orbs({
 }
 
 /** The four steps, as glass. */
-function Steps() {
+async function Steps() {
+  const t = await getTranslations("landing");
+
   const steps = [
     {
       n: "01",
       jp: "選ぶ",
-      title: "Pick a theme",
-      body: `Ten corners of Japanese culture. The theme is a category and a colour — it references no company and carries no price.`,
+      title: t("steps.one.title"),
+      body: t("steps.one.body"),
     },
     {
       n: "02",
       jp: "測る",
-      title: "Choose a yardstick",
-      body: `Optionally measure your market cap against one of ${STOCK_CATALOG.length} Tokyo listings. The price is read live from the exchange feed at the moment you pick.`,
+      title: t("steps.two.title"),
+      body: t("steps.two.body", { count: STOCK_CATALOG.length }),
     },
     {
       n: "03",
       jp: "発行",
-      title: "Sign the launch",
-      body: `Your wallet sends one transaction to Pons. JapanPad never touches it, never holds the token, and never takes a cut.`,
+      title: t("steps.three.title"),
+      body: t("steps.three.body"),
     },
     {
       n: "04",
       jp: "卒業",
-      title: "Trade, then graduate",
-      body: `The curve prices every buy and sell in ${NATIVE_SYMBOL}. At the threshold, Pons moves the liquidity into a permanently locked Uniswap v4 pool.`,
+      title: t("steps.four.title"),
+      body: t("steps.four.body", { symbol: NATIVE_SYMBOL }),
     },
   ];
 
@@ -319,10 +321,10 @@ function Steps() {
 
       <SectionHead
         jp="仕組み"
-        title="Four steps, one signature"
-        sub="Nothing here is custodial and nothing here is reviewed."
+        title={t("steps.heading")}
+        sub={t("steps.sub")}
         href="/how-it-works"
-        hrefLabel="In detail"
+        hrefLabel={t("steps.more")}
       />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -354,7 +356,9 @@ function Steps() {
  * without giving equal room to its limits is how a measurement starts sounding
  * like a backing, which is the one impression this product cannot afford.
  */
-function Denomination() {
+async function Denomination() {
+  const t = await getTranslations("landing");
+
   return (
     <section className="relative mx-auto max-w-6xl px-5 py-6">
       <Orbs
@@ -366,37 +370,33 @@ function Denomination() {
 
       <SectionHead
         jp="尺度"
-        title={`Measured in Tokyo, settled in ${NATIVE_SYMBOL}`}
-        sub="A yardstick, not a claim."
+        title={t("denomination.heading", { symbol: NATIVE_SYMBOL })}
+        sub={t("denomination.sub")}
       />
 
       <div className="glass p-6 sm:p-8">
         <div className="relative grid md:grid-cols-2 gap-8">
           <div>
-            <p className="label text-vermilion/80">What it is</p>
+            <p className="label text-vermilion/80">{t("denomination.isLabel")}</p>
             <p className="mt-3 text-sm text-sumi/85 leading-relaxed">
-              A creator can pick one of {STOCK_CATALOG.length} Tokyo Stock
-              Exchange listings as the unit their market cap is quoted in, the
-              way a chart can be drawn in dollars or in yen. The price comes from
-              a public market-data feed at the moment it is read, and the ticker
-              is recorded in the token&rsquo;s own description on chain.
+              {t("denomination.isBodyOne", { count: STOCK_CATALOG.length })}
             </p>
             <p className="mt-3 text-sm text-sumi/85 leading-relaxed">
-              Company names and prices are never written into this site&rsquo;s
-              source. Only the ticker is. If the feed does not answer for a
-              listing, that listing is simply not offered.
+              {t("denomination.isBodyTwo")}
             </p>
           </div>
 
           <div className="md:border-l md:border-rule/80 md:pl-8">
-            <p className="label text-vermilion/80">What it is not</p>
+            <p className="label text-vermilion/80">
+              {t("denomination.isNotLabel")}
+            </p>
             <ul className="mt-3 space-y-2.5 text-sm text-sumi/85 leading-relaxed">
               {[
-                "Not backing. No company holds anything on a coin's behalf.",
-                "Not ownership. No shares, dividends, or voting rights.",
-                "Not redeemable. A coin cannot be exchanged for stock.",
-                "Not affiliation. No listed company is involved with JapanPad.",
-                `Not linked in price. The curve trades in ${NATIVE_SYMBOL}; the two move apart.`,
+                t("denomination.notBacking"),
+                t("denomination.notOwnership"),
+                t("denomination.notRedeemable"),
+                t("denomination.notAffiliation"),
+                t("denomination.notLinked", { symbol: NATIVE_SYMBOL }),
               ].map((line) => (
                 <li key={line} className="flex gap-2.5">
                   <span className="text-vermilion/60 shrink-0" aria-hidden>
@@ -414,27 +414,29 @@ function Denomination() {
 }
 
 /** The four things JapanPad deliberately does not do. */
-function Assurances() {
+async function Assurances() {
+  const t = await getTranslations("landing");
+
   const items = [
     {
       jp: "無管理",
-      title: "Never custodial",
-      body: "No deposits, no hot wallet, no withdrawal queue. Every transaction is signed in your own wallet and sent to Pons directly.",
+      title: t("assurances.custody.title"),
+      body: t("assurances.custody.body"),
     },
     {
       jp: "無手数料",
-      title: "No cut on top",
-      body: "Pons charges its launch fee and its trade fee. JapanPad adds nothing, and the creator fee slot points at the creator.",
+      title: t("assurances.fees.title"),
+      body: t("assurances.fees.body"),
     },
     {
       jp: "実データ",
-      title: "No invented numbers",
-      body: "Prices, reserves, progress and fees are read at request time. When a source is down, this site says so instead of guessing.",
+      title: t("assurances.data.title"),
+      body: t("assurances.data.body"),
     },
     {
       jp: "無審査",
-      title: "Nothing is vetted",
-      body: "A theme and a ticker are labels a creator typed. JapanPad curates presentation, not merit — none of this is a recommendation.",
+      title: t("assurances.vetting.title"),
+      body: t("assurances.vetting.body"),
     },
   ];
 
@@ -449,8 +451,8 @@ function Assurances() {
 
       <SectionHead
         jp="約束"
-        title="What this site will not do"
-        sub="The constraints are the product."
+        title={t("assurances.heading")}
+        sub={t("assurances.sub")}
       />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -473,15 +475,17 @@ function Assurances() {
 }
 
 async function RecentLaunches() {
+  const t = await getTranslations("landing");
   const { launches, complete, readAt } = await listLaunches({ limit: 8 });
 
   if (!complete) {
     return (
       <div className="card p-8 text-center">
-        <p className="text-sumi/80">Launch data is unavailable right now.</p>
+        <p className="text-sumi/80">{t("launches.unavailableTitle")}</p>
         <p className="text-xs text-muted mt-1">
-          The chain could not be read at {new Date(readAt).toUTCString()}. Nothing is
-          shown rather than a stale or invented list.
+          {t("launches.unavailableBody", {
+            readAt: new Date(readAt).toUTCString(),
+          })}
         </p>
       </div>
     );
@@ -490,15 +494,15 @@ async function RecentLaunches() {
   if (launches.length === 0) {
     return (
       <div className="card p-8 text-center">
-        <p className="font-display text-lg">No launches yet.</p>
+        <p className="font-display text-lg">{t("launches.emptyTitle")}</p>
         <p className="text-sm text-muted mt-1">
-          Nothing has been launched through JapanPad on {CHAIN_NAME} so far.
+          {t("launches.emptyBody", { chain: CHAIN_NAME })}
         </p>
         <Link
           href="/launch"
           className="inline-block mt-4 px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
         >
-          Be the first
+          {t("launches.beFirst")}
         </Link>
       </div>
     );
@@ -619,7 +623,8 @@ function BandCrest() {
  * because the disclaimer is the last thing a reader should have in mind and
  * burying it above the chips would make it decoration.
  */
-function TokyoBand() {
+async function TokyoBand() {
+  const t = await getTranslations("landing");
   const shown = FEATURED.length;
   const rest = STOCK_CATALOG.length - shown;
   const byTheme = new Map<string, number>();
@@ -637,9 +642,7 @@ function TokyoBand() {
             <p className="font-display text-3xl sm:text-4xl font-bold text-ivory">
               Japan<span className="text-sakura">Pad</span>
             </p>
-            <p className="mt-2 text-sm text-ivory/70">
-              Launch tokens measured against Japanese stocks.
-            </p>
+            <p className="mt-2 text-sm text-ivory/70">{t("band.tagline")}</p>
             <p className="jp mt-1 text-xs tracking-[0.3em] text-ivory/40" aria-hidden>
               東京の 尺度で
             </p>
@@ -650,47 +653,60 @@ function TokyoBand() {
               href="/launch"
               className="px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
             >
-              Launch a token
+              {t("band.ctaLaunch")}
             </Link>
             <Link
               href="/explore"
               className="px-5 py-2.5 rounded-full border border-ivory/25 text-ivory text-sm hover:bg-ivory/10 hover:border-ivory/50 transition-colors"
             >
-              Explore
+              {t("band.ctaExplore")}
             </Link>
           </div>
         </div>
 
         <div className="h-px my-8 bg-gradient-to-r from-ivory/25 via-ivory/12 to-transparent" />
 
-        <p className="label mb-4">Denominations · Tokyo Stock Exchange</p>
+        <p className="label mb-4">{t("band.denominationsLabel")}</p>
 
         <Suspense fallback={<TickerChipsSkeleton />}>
           <TickerChips />
         </Suspense>
 
+        {/*
+          Rich text rather than three interpolations, because the figures keep
+          their mono treatment and each language puts them in a different order
+          — Japanese counts the themes before the listings.
+        */}
         <p className="mt-5 text-xs text-ivory/55">
-          <span className="num">+{rest} more</span> ·{" "}
-          <span className="num">{STOCK_CATALOG.length}</span> listings across{" "}
-          <span className="num">{byTheme.size}</span> themes · every one quoted
-          live, none stored in this site
+          {t.rich("band.counts", {
+            rest,
+            total: STOCK_CATALOG.length,
+            themes: byTheme.size,
+            num: (chunks) => <span className="num">{chunks}</span>,
+          })}
         </p>
 
         <p className="mt-8 max-w-3xl text-[11px] leading-relaxed text-ivory/45">
-          JapanPad is not affiliated with Robinhood, with the Tokyo Stock
-          Exchange, or with any company named above. Choosing a listing sets the
-          unit a token&rsquo;s market cap is displayed in and nothing more — it
-          is not backing, ownership, affiliation, or a claim on any business, and
-          the token is not redeemable for shares. Tokens launched here are
-          user-created, unreviewed, and carry risk including total loss. They may
-          not be available in your region. Nothing here is investment advice.
+          {t("band.disclaimer")}
         </p>
       </div>
     </section>
   );
 }
 
-export default function Home() {
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  // Opts the page into static rendering, which is what `revalidate` above is
+  // for. Without it the first translation read below would make the route
+  // dynamic and put the Pons launch scan on every visit.
+  setRequestLocale(locale);
+
+  const t = await getTranslations("landing");
+
   return (
     <>
       <Hero />
@@ -706,10 +722,10 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-5 pb-14">
         <SectionHead
           jp="発行"
-          title="Recent launches"
-          sub={`Read live from Pons on ${CHAIN_NAME}.`}
+          title={t("launches.heading")}
+          sub={t("launches.sub", { chain: CHAIN_NAME })}
           href="/explore"
-          hrefLabel="See all"
+          hrefLabel={t("launches.more")}
         />
         <Suspense fallback={<LaunchesSkeleton />}>
           <RecentLaunches />
@@ -721,14 +737,14 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-5 pt-16">
         <SectionHead
           jp="テーマ"
-          title="Themes"
-          sub="Ten corners of Japanese culture to launch under."
+          title={t("themes.heading")}
+          sub={t("themes.sub")}
           href="/themes"
-          hrefLabel="All themes"
+          hrefLabel={t("themes.more")}
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {THEMES.slice(0, 5).map((t) => (
-            <ThemeCard key={t.id} theme={t} />
+          {THEMES.slice(0, 5).map((theme) => (
+            <ThemeCard key={theme.id} theme={theme} />
           ))}
         </div>
       </section>

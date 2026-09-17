@@ -70,6 +70,33 @@ html {
   color: var(--color-muted);
 }
 
+/**
+ * The same eyebrow, set for Japanese.
+ *
+ * Every property `.label` sets is a Latin typographic convention, and three of
+ * them actively damage kana and kanji. The mono face carries no Japanese at all,
+ * so the text silently falls through to whatever the OS picks — losing the
+ * deliberate face on the one element that appears on every page. 10px is near
+ * unreadable for kanji, which need more height than capitals to stay legible at
+ * the same optical size. And 0.18em is small-caps tracking: Japanese is already
+ * monospaced by nature, so letterspacing it opens gaps that read as broken word
+ * boundaries rather than as emphasis.
+ *
+ * `text-transform: uppercase` is left to apply — it is a no-op on Japanese and
+ * still wanted for any Latin ticker or product name inline in the label.
+ *
+ * Gothic rather than the mincho of `.jp`: this is small UI furniture, not
+ * display type, and mincho's fine strokes disappear at this size. Keyed off
+ * `:lang(ja)`, which the html element already carries, so it follows the locale
+ * with no extra class plumbing at any call site.
+ */
+:lang(ja) .label {
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic",
+    YuGothic, "Noto Sans JP", "Meiryo", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
 body {
   background-color: var(--color-ivory);
   color: var(--color-sumi);

@@ -1,1 +1,31 @@
-{}
+{
+  "card": {
+    "untitled": "Untitled",
+    "by": "by <addr>{address}</addr>",
+    "graduated": "Graduated",
+    "denomination": "vs {ticker}",
+    "denominationTitle": "Market cap measured against {ticker}. Not backed by or affiliated with the company.",
+    "toGraduation": "<num>{percent}</num> to graduation"
+  },
+  "theme": {
+    "launchCount": "{count, plural, one {<num>#</num> launch} other {<num>#</num> launches}}"
+  },
+  "example": {
+    "badge": "Example",
+    "notLaunched": "not launched",
+    "cardLabel": "Example card: {name}. Not a real listing.",
+    "gridLabel": "Example cards",
+    "gridBadge": "Examples",
+    "realAbove": "Everything above this line is real. Everything below it is not.",
+    "noneYet": "Nothing has launched through JapanPad yet.",
+    "explainer": "These cards are placeholders showing what a launch looks like here. They are not tokens: no contract, no price, no curve, and nothing to trade. They disappear as real launches fill the row."
+  },
+  "address": {
+    "label": "CA",
+    "copyTitle": "Copy {address}",
+    "copied": "Contract address copied",
+    "copyFailed": "Copy failed",
+    "explorerTitle": "View the contract on the explorer",
+    "explorerLabel": "View contract on explorer"
+  }
+}

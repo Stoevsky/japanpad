@@ -1,5 +1,8 @@
 import { defineRouting } from "next-intl/routing";
 import { createNavigation } from "next-intl/navigation";
+import { DEFAULT_LOCALE, LOCALES } from "./locales";
+
+export type { Locale } from "./locales";
 
 /**
  * The two languages the site is written in, and how they map onto URLs.
@@ -21,12 +24,10 @@ import { createNavigation } from "next-intl/navigation";
  * prerendered and revalidated on its own.
  */
 export const routing = defineRouting({
-  locales: ["en", "ja"],
-  defaultLocale: "en",
+  locales: LOCALES,
+  defaultLocale: DEFAULT_LOCALE,
   localePrefix: "as-needed",
 });
-
-export type Locale = (typeof routing.locales)[number];
 
 /**
  * Locale-aware replacements for `next/link` and friends.

@@ -3,7 +3,7 @@ import { CHAIN_NAME } from "@/lib/chain";
 import { THEMES, getTheme } from "@/lib/themes";
 import { listLaunches } from "@/lib/pons/read";
 import { LaunchCard } from "@/components/LaunchCard";
-import { ExampleGrid } from "@/components/ExampleCard";
+import { ExampleGrid, examplesToShow } from "@/components/ExampleCard";
 import { EXAMPLE_LAUNCHES } from "@/lib/examples";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -41,6 +41,10 @@ export default async function Explore({
   });
 
   const activeTheme = themeId ? getTheme(themeId) : null;
+
+  // Placeholders finish the row the real launches started, and only on the
+  // unfiltered view. See examplesToShow.
+  const padding = activeTheme ? 0 : examplesToShow(sorted.length);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
@@ -94,45 +98,51 @@ export default async function Explore({
             shown rather than a stale or invented list.
           </p>
         </div>
-      ) : sorted.length === 0 ? (
-        <div className="space-y-6">
-          {/*
-            Placeholders only on the unfiltered view. Under a theme filter the
-            honest answer is that this theme is empty, and a grid of examples
-            from other themes would answer a question nobody asked.
-          */}
-          {activeTheme ? (
-            <div className="card p-10 text-center">
-              <p className="font-display text-lg">Nothing in {activeTheme.name} yet.</p>
-              <p className="text-sm text-muted mt-1">
-                No JapanPad token has been filed under this theme so far.
-              </p>
-              <Link
-                href="/launch"
-                className="inline-block mt-4 px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
-              >
-                Launch one
-              </Link>
-            </div>
-          ) : (
-            <>
-              <ExampleGrid examples={EXAMPLE_LAUNCHES} />
-              <div className="text-center">
-                <Link
-                  href="/launch"
-                  className="inline-block px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
-                >
-                  Launch the first on {CHAIN_NAME}
-                </Link>
-              </div>
-            </>
-          )}
+      ) : sorted.length === 0 && activeTheme ? (
+        /*
+          Under a theme filter the honest answer is that this theme is empty.
+          Padding it with placeholders drawn from other themes would answer a
+          question nobody asked.
+        */
+        <div className="card p-10 text-center">
+          <p className="font-display text-lg">Nothing in {activeTheme.name} yet.</p>
+          <p className="text-sm text-muted mt-1">
+            No JapanPad token has been filed under this theme so far.
+          </p>
+          <Link
+            href="/launch"
+            className="inline-block mt-4 px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
+          >
+            Launch one
+          </Link>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {sorted.map((l) => (
-            <LaunchCard key={l.token} launch={l} />
-          ))}
+        <div className="space-y-8">
+          {sorted.length > 0 && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {sorted.map((l) => (
+                <LaunchCard key={l.token} launch={l} />
+              ))}
+            </div>
+          )}
+
+          {padding > 0 && (
+            <ExampleGrid
+              examples={EXAMPLE_LAUNCHES.slice(0, padding)}
+              hasRealLaunches={sorted.length > 0}
+            />
+          )}
+
+          <div className="text-center">
+            <Link
+              href="/launch"
+              className="inline-block px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
+            >
+              {sorted.length === 0
+                ? `Launch the first on ${CHAIN_NAME}`
+                : `Launch one on ${CHAIN_NAME}`}
+            </Link>
+          </div>
         </div>
       )}
     </div>

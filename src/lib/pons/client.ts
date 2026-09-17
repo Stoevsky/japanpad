@@ -5,10 +5,10 @@ import {
   createPublicClient,
   http,
 } from "viem";
-import { japanpadChain, RPC_URL } from "../chain";
+import { CHAIN_ENV, chainFor, rpcUrlFor, type ChainEnv } from "../chain";
 
 /**
- * The read-only chain client, usable from both sides.
+ * The read-only chain clients, usable from both sides.
  *
  * Split out of read.ts, which is `server-only` because it holds the indexer.
  * The browser genuinely needs to read the chain — a quote is only true for the
@@ -16,37 +16,62 @@ import { japanpadChain, RPC_URL } from "../chain";
  * types rather than on a server whose answer is already stale by the time it
  * arrives.
  *
- * Nothing secret goes through here. RPC_URL falls back to a private endpoint
- * when one is configured, and that is the one thing worth watching: a private
- * RPC set through JAPANPAD_RPC_URL stays server-side, while NEXT_PUBLIC_RPC_URL
- * is compiled into the bundle by definition. See lib/chain.ts.
+ * Nothing secret goes through here. The endpoint falls back to a private one
+ * when configured, and that is the one thing worth watching: a private RPC set
+ * through JAPANPAD_RPC_URL stays server-side, while NEXT_PUBLIC_RPC_URL is
+ * compiled into the bundle by definition. See lib/chain.ts.
  */
-export const publicClient = createPublicClient({
-  chain: japanpadChain,
-  transport: http(RPC_URL, {
-    batch: true,
-    // Robinhood's public endpoint drops connections under load — observed
-    // mid-build as "Client network socket disconnected before secure TLS
-    // connection was established", and once as a failed launch-terms read that
-    // succeeded on every one of 36 retries a minute later. Retrying costs a few
-    // hundred milliseconds; not retrying costs a page that tells the user Pons
-    // is unreachable when it simply blinked.
-    //
-    // Bounded, though, and that bound is load-bearing. Five attempts at ten
-    // seconds is fifty seconds for a single read, and five routes prerender at
-    // build time with several reads each — which is how a deploy came to fail
-    // outright with "/themes took more than 60 seconds", three times over.
-    //
-    // A build that cannot survive a slow RPC is a build you cannot ship a
-    // hotfix from during an outage. Three attempts at six seconds caps one read
-    // near twenty seconds, which leaves the prerender enough room to give up
-    // and render the honest "unavailable" state instead of blowing the budget.
-    // ISR fills in real data on the first revalidation afterwards.
-    retryCount: 2,
-    retryDelay: 250,
-    timeout: 6_000,
-  }),
-});
+const TRANSPORT = {
+  batch: true,
+  // Robinhood's public endpoint drops connections under load — observed
+  // mid-build as "Client network socket disconnected before secure TLS
+  // connection was established", and once as a failed launch-terms read that
+  // succeeded on every one of 36 retries a minute later. Retrying costs a few
+  // hundred milliseconds; not retrying costs a page that tells the user Pons
+  // is unreachable when it simply blinked.
+  //
+  // Bounded, though, and that bound is load-bearing. Five attempts at ten
+  // seconds is fifty seconds for a single read, and five routes prerender at
+  // build time with several reads each — which is how a deploy came to fail
+  // outright with "/themes took more than 60 seconds", three times over.
+  //
+  // A build that cannot survive a slow RPC is a build you cannot ship a
+  // hotfix from during an outage. Three attempts at six seconds caps one read
+  // near twenty seconds, which leaves the prerender enough room to give up
+  // and render the honest "unavailable" state instead of blowing the budget.
+  // ISR fills in real data on the first revalidation afterwards.
+  retryCount: 2,
+  retryDelay: 250,
+  timeout: 6_000,
+} as const;
+
+const CLIENTS = new Map<ChainEnv, ReturnType<typeof createPublicClient>>();
+
+/**
+ * The client for one chain, built once.
+ *
+ * Memoised because a fresh client is a fresh batch scheduler: the token page's
+ * sixteen reads would go out as sixteen requests instead of one multicall,
+ * against an endpoint that already drops connections under load.
+ *
+ * The chain and the endpoint have to move together. Endpoints do not reject
+ * requests meant for another chain — a Robinhood node handed an Arc address
+ * answers, about a Robinhood address — so the failure mode of getting this
+ * wrong is wrong data on a page with a trade panel, not a visible error.
+ */
+export function clientFor(env: ChainEnv) {
+  const existing = CLIENTS.get(env);
+  if (existing) return existing;
+  const client = createPublicClient({
+    chain: chainFor(env),
+    transport: http(rpcUrlFor(env), TRANSPORT),
+  });
+  CLIENTS.set(env, client);
+  return client;
+}
+
+/** The client for the chain this build targets. */
+export const publicClient = clientFor(CHAIN_ENV);
 
 /**
  * Records why a chain read failed, without putting it on screen.

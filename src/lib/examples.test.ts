@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { EXAMPLE_LAUNCHES } from "./examples";
+import { examplesToShow } from "@/components/ExampleCard";
 import { isThemeId } from "./themes";
 
 /**
@@ -69,5 +70,40 @@ describe("example launches", () => {
     // both, which is the entire reason these exist.
     expect(EXAMPLE_LAUNCHES.length % 4).toBe(0);
     expect(EXAMPLE_LAUNCHES.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * How many placeholders appear next to real launches.
+ *
+ * The rule has one job: make the placeholders recede as the real thing arrives,
+ * automatically. The alternative is a constant that somebody has to remember to
+ * turn down, and nobody ever does — which is how a site ends up still showing
+ * eight invented cards next to forty real ones.
+ */
+describe("examplesToShow", () => {
+  test("shows two rows when there is nothing at all", () => {
+    expect(examplesToShow(0)).toBe(8);
+  });
+
+  test("finishes the row the real launches started", () => {
+    expect(examplesToShow(1)).toBe(3);
+    expect(examplesToShow(2)).toBe(2);
+    expect(examplesToShow(3)).toBe(1);
+  });
+
+  test("stops entirely once a full row of real launches exists", () => {
+    // The page can carry itself from here, and a placeholder beside a populated
+    // grid is all cost and no benefit.
+    expect(examplesToShow(4)).toBe(0);
+    expect(examplesToShow(12)).toBe(0);
+    expect(examplesToShow(200)).toBe(0);
+  });
+
+  test("never asks for more placeholders than exist", () => {
+    for (let real = 0; real <= 12; real++) {
+      expect(examplesToShow(real)).toBeLessThanOrEqual(EXAMPLE_LAUNCHES.length);
+      expect(examplesToShow(real)).toBeGreaterThanOrEqual(0);
+    }
   });
 });

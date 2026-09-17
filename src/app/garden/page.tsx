@@ -4,7 +4,7 @@ import { formatEth, formatPercent } from "@/lib/format";
 import { listLaunches, type LaunchSummary } from "@/lib/pons/read";
 import { THEMES, type Theme } from "@/lib/themes";
 import { PageHeader } from "@/components/PageHeader";
-import { ExampleGrid } from "@/components/ExampleCard";
+import { ExampleGrid, examplesToShow } from "@/components/ExampleCard";
 import { EXAMPLE_LAUNCHES } from "@/lib/examples";
 
 /**
@@ -67,6 +67,8 @@ export default async function GardenPage() {
     plants: launches.filter((l) => l.themeId === theme.id),
   })).filter((bed) => bed.plants.length > 0);
 
+  const padding = examplesToShow(launches.length);
+
   const counts = launches.reduce(
     (acc, l) => {
       acc[stageOf(l)] += 1;
@@ -123,23 +125,33 @@ export default async function GardenPage() {
             shown rather than a stale or invented one.
           </p>
         </div>
-      ) : beds.length === 0 ? (
-        <div className="space-y-6">
-          <ExampleGrid examples={EXAMPLE_LAUNCHES} />
+      ) : (
+        <div className="space-y-8">
+          {beds.length > 0 && (
+            <div className="space-y-4">
+              {beds.map((bed) => (
+                <Bed key={bed.theme.id} theme={bed.theme} plants={bed.plants} />
+              ))}
+            </div>
+          )}
+
+          {padding > 0 && (
+            <ExampleGrid
+              examples={EXAMPLE_LAUNCHES.slice(0, padding)}
+              hasRealLaunches={launches.length > 0}
+            />
+          )}
+
           <div className="text-center">
             <Link
               href="/launch"
               className="inline-block px-5 py-2.5 rounded-full bg-vermilion text-paper text-sm hover:bg-vermilion-soft transition-colors"
             >
-              Plant the first on {CHAIN_NAME}
+              {launches.length === 0
+                ? `Plant the first on ${CHAIN_NAME}`
+                : `Plant one on ${CHAIN_NAME}`}
             </Link>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {beds.map((bed) => (
-            <Bed key={bed.theme.id} theme={bed.theme} plants={bed.plants} />
-          ))}
         </div>
       )}
     </div>

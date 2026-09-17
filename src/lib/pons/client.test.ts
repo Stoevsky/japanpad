@@ -4,7 +4,54 @@ import {
   HttpRequestError,
   TimeoutError,
 } from "viem";
-import { classifyReadFailure, isMissingContract } from "./client";
+import { classifyReadFailure, clientFor, isMissingContract, publicClient } from "./client";
+import { CHAIN_ENV, CHAIN_ENVS, CHAIN_PRESETS } from "../chain";
+
+/**
+ * One client per chain, chosen at call time rather than at import time.
+ *
+ * `publicClient` is a module-level singleton bound to whichever chain the build
+ * was configured for, which is correct right up until the header switcher lands
+ * and a reader can ask for a different one. At that point a singleton cannot
+ * answer the question: the client carries the chain and the endpoint, and both
+ * have to change together.
+ *
+ * The failure mode if they do not is quiet and bad. Endpoints do not reject
+ * requests for the wrong chain — a Robinhood node asked for an Arc address
+ * answers, about a Robinhood address. Wrong data, not an error, on a page with
+ * a trade panel.
+ */
+describe("clientFor", () => {
+  test("reads the chain it was asked for, not the build's default", () => {
+    for (const env of CHAIN_ENVS) {
+      expect(clientFor(env).chain?.id).toBe(CHAIN_PRESETS[env].id);
+    }
+  });
+
+  test("points each client at that chain's own endpoint", () => {
+    // One endpoint serves one chain. With nothing configured this is the
+    // preset's own public RPC; what matters is that it is never another
+    // chain's.
+    for (const env of CHAIN_ENVS) {
+      expect(clientFor(env).transport.url).toBe(CHAIN_PRESETS[env].rpcUrl);
+    }
+  });
+
+  test("hands back the same client each time, so request batching survives", () => {
+    // A fresh client per call is a fresh batch scheduler: the token page's six
+    // reads would go out as six requests instead of one multicall, against a
+    // public endpoint that already drops connections under load.
+    for (const env of CHAIN_ENVS) {
+      expect(clientFor(env)).toBe(clientFor(env));
+    }
+  });
+
+  test("is the same object publicClient already is, for the default chain", () => {
+    // Otherwise the default chain has two clients with two batch queues, and
+    // which one a caller gets depends on which import it happened to use.
+    expect(publicClient).toBe(clientFor(CHAIN_ENV));
+  });
+});
 
 /**
  * Telling "there is no such token" apart from "the chain did not answer".

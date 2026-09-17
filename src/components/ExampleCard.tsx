@@ -68,29 +68,44 @@ export function ExampleCard({ example }: { example: ExampleLaunch }) {
 }
 
 /**
- * The grid of placeholders, with the claim stated once above it as well.
+ * The grid of placeholders, kept in a section of its own.
  *
- * Rendered only where a live read has already succeeded and come back empty, so
- * this never stands in for data that failed to load — that case has its own
- * "unavailable" panel, and conflating the two would turn an outage into a page
- * that looks populated.
+ * Deliberately not interleaved with real cards. A placeholder sitting in the
+ * same grid as a live token is one badge away from being read as a listing, and
+ * badges lose that argument at a glance. Below a rule, under its own heading,
+ * the separation carries the meaning even before anyone reads the words.
+ *
+ * Rendered only where a live read has already succeeded, so this never stands
+ * in for data that failed to load — that case has its own "unavailable" panel,
+ * and conflating the two turns an outage into a page that looks populated.
  */
-export function ExampleGrid({ examples }: { examples: readonly ExampleLaunch[] }) {
+export function ExampleGrid({
+  examples,
+  hasRealLaunches,
+}: {
+  examples: readonly ExampleLaunch[];
+  /** Changes the claim above the grid; there is no honest single wording. */
+  hasRealLaunches: boolean;
+}) {
   return (
-    <section aria-label="Example cards">
-      <div className="card p-4 mb-4 border-dashed">
-        <p className="text-sm">
-          <span className="text-[10px] align-middle mr-2 px-2 py-0.5 rounded-full border border-dashed border-vermilion/50 text-vermilion uppercase tracking-wide">
-            Examples
-          </span>
-          Nothing has launched through JapanPad yet.
-        </p>
-        <p className="text-xs text-muted mt-1.5 leading-relaxed">
-          The cards below are placeholders showing what a launch looks like here. They are
-          not tokens, they carry no price and no contract, and they cannot be traded. They
-          disappear the moment a real launch exists.
-        </p>
+    <section aria-label="Example cards" className="pt-2">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-vermilion/50 text-vermilion uppercase tracking-wide shrink-0">
+          Examples
+        </span>
+        <span className="h-px flex-1 bg-rule" aria-hidden />
       </div>
+
+      <p className="text-sm text-sumi/80">
+        {hasRealLaunches
+          ? "Everything above this line is real. Everything below it is not."
+          : "Nothing has launched through JapanPad yet."}
+      </p>
+      <p className="text-xs text-muted mt-1.5 mb-4 leading-relaxed max-w-2xl">
+        These cards are placeholders showing what a launch looks like here. They are not
+        tokens: no contract, no price, no curve, and nothing to trade. They disappear as
+        real launches fill the row.
+      </p>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-hidden>
         {examples.map((e) => (
@@ -99,4 +114,23 @@ export function ExampleGrid({ examples }: { examples: readonly ExampleLaunch[] }
       </div>
     </section>
   );
+}
+
+/**
+ * How many placeholders to draw beside `realCount` real ones.
+ *
+ * Enough to bring the page up to a row's worth between them — the grid is four
+ * across at `lg` — and no more. The two grids are separate, so this does not
+ * literally complete the real row; it keeps the ratio sane. Two real launches
+ * and two placeholders reads as a page filling up. Two real launches and eight
+ * placeholders reads as a site pretending to have ten.
+ *
+ * Zero once a full row of real launches exists, which is the point at which the
+ * page carries itself and a placeholder is all cost.
+ */
+export const EXAMPLE_ROW = 4;
+
+export function examplesToShow(realCount: number): number {
+  if (realCount >= EXAMPLE_ROW) return 0;
+  return realCount === 0 ? EXAMPLE_ROW * 2 : EXAMPLE_ROW - realCount;
 }
